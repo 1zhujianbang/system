@@ -1,0 +1,363 @@
+# =============================================
+# AI Trading Bot 配置文件
+# =============================================
+
+# 用户基础配置
+user_config:
+  # 交易对配置
+  trading_pairs:
+    - "BTC-USDT"
+    - "ETH-USDT"
+    - "SOL-USDT"
+  
+  # 风险偏好: conservative(保守), moderate(中性), aggressive(激进)
+  risk_appetite: "moderate"
+  
+  # 资金（以基准货币计）
+  cash: 10000.0
+  
+  # 基准货币
+  base_currency: "USDT"
+  
+  # 交易模式: paper(模拟交易), live(实盘交易)
+  trading_mode: "paper"
+  
+  # 是否启用自动交易
+  auto_trading: false
+
+# 模型配置(modeL_config中L大写，避免与BaseModel库关键字冲突)
+modeL_config:
+  # 模型名称（对应models目录下的模型文件）
+  model_name: "transformer_v2_7d.pt"
+  
+  # 模型类型: "transformer", "lstm", "gru", "ensemble"
+  model_type: "transformer"
+  
+  # 数据时间窗口（用于预测的小时数）
+  data_window: 168
+  
+  # 预测目标: "price", "trend", "volatility"
+  prediction_target: "trend"
+  
+  # 预测时间跨度（小时）
+  prediction_horizon: 24
+  
+  # 特征列表
+  features:
+    # 开盘价 api自带参数
+    - "open"
+    # 最高价 api自带参数
+    - "high" 
+    # 最低价 api自带参数
+    - "low"
+    # 收盘价 api自带参数
+    - "close"
+    # 成交量 api自带参数
+    - "volume"
+    # RSI周期 由talib计算器计算
+    - "rsi"
+    # MACD周期 由talib计算器计算
+    - "macd"
+    # 布林带上轨 由talib计算器计算
+    - "bollinger_upper"
+    # 布林带下轨 由talib计算器计算
+    - "bollinger_lower"
+    # 移动平均线 由talib计算器计算
+    - "ma_20"
+    - "ma_50"
+    # 量比 由talib计算器计算
+    - "volume_ratio"
+    # 收益率 由talib计算器计算
+    - "returns_1"
+    # 平均真实波幅 由talib计算器计算
+    - "atr"
+  
+  # 模型参数
+  hyperparameters:
+    sequence_length: 96
+    batch_size: 32
+    learning_rate: 0.001
+    dropout_rate: 0.2
+
+# 风险控制配置
+risk_config:
+  # 仓位管理
+  position_management:
+    # 单笔最大仓位比例 (0.01 = 1%)
+    max_position_size: 0.03
+    
+    # 总仓位最大比例
+    max_total_position: 0.15
+    
+    # 最小交易金额
+    min_trade_amount: 10.0
+    
+    # 是否允许杠杆交易
+    enable_leverage: false
+    
+    # 杠杆倍数（如果启用）
+    leverage: 1
+  
+  # 止损配置
+  stop_loss:
+    # 启用止损
+    enabled: true
+    
+    # 止损类型: "fixed", "trailing", "atr"
+    type: "trailing"
+    
+    # 固定止损比例
+    fixed_stop_loss: 0.05
+    
+    # 移动止损比例
+    trailing_stop_loss: 0.03
+    
+    # ATR止损倍数
+    atr_stop_multiplier: 2.0
+  
+  # 止盈配置
+  take_profit:
+    # 启用止盈
+    enabled: true
+    
+    # 止盈比例
+    profit_target: 0.08
+    
+    # 部分止盈配置
+    partial_take_profit:
+      enabled: true
+      levels:
+        - { profit: 0.03, close_percent: 0.3 }
+        - { profit: 0.06, close_percent: 0.3 }
+        - { profit: 0.10, close_percent: 0.4 }
+  
+  # 每日风险限制
+  daily_limits:
+    # 最大每日亏损金额
+    max_daily_loss: 500.0
+    
+    # 最大每日亏损比例 (0-100)
+    max_daily_loss_percent: 0.05
+    
+    # 最大每日交易次数 ()
+    max_daily_trades: 10
+
+# 交易所配置
+exchange_config:
+  # 交易所名称: "binance", "okx", "bybit"
+  exchange_name: "binance"
+  
+  # API配置
+  api:
+    # API Key（建议从环境变量读取）
+    api_key: "${BINANCE_API_KEY}"
+    
+    # API Secret（建议从环境变量读取）
+    api_secret: "${BINANCE_API_SECRET}"
+    
+    # 沙盒模式（仅测试）
+    sandbox_mode: true
+  
+  # 网络配置
+  network:
+    # 请求超时时间（秒）
+    timeout: 30
+    
+    # 重试次数
+    retries: 3
+    
+    # 速率限制（请求/秒）
+    rate_limit: 10
+
+# 数据配置
+data_config:
+  # 数据源: "exchange", "database", "csv"
+  data_source: "exchange"
+
+  # 代理设置（如有需要）
+  proxy: "http://154.83.14.105:80/"
+  
+  # 交易所数据沙盒模式，默认使用实盘数据,只在data_source为exchange时该参数有效
+  sandbox: false
+
+  # 时间框架: "1M", "5M", "15M", "1H", "4H", "1D"
+  timeframe: "1H"
+  
+  # 历史数据获取天数
+  historical_days: 30
+  
+  # 实时数据更新间隔（秒）
+  update_interval: 60
+  
+  # 特征工程配置
+  feature_engineering:
+    # 技术指标
+    technical_indicators:
+      rsi:
+        period: 14
+        enabled: true
+      macd:
+        fast_period: 12
+        slow_period: 26
+        signal_period: 9
+        enabled: true
+      bollinger_bands:
+        period: 20
+        std_dev: 2
+        enabled: true
+      atr:
+        period: 14
+        enabled: true
+    
+    # 数据标准化
+    normalization:
+      method: "zscore"  # "minmax", "zscore", "robust"
+      enabled: true
+
+# 交易策略配置
+strategy_config:
+  # 策略名称
+  strategy_name: "ai_hybrid_strategy"
+  
+  # 信号生成
+  signal_generation:
+    # 置信度阈值
+    confidence_threshold: 0.65
+    
+    # 最小信号强度
+    min_signal_strength: 0.1
+    
+    # 信号确认周期
+    confirmation_period: 2
+  
+  # 入场条件
+  entry_conditions:
+    # 启用AI信号
+    ai_signal_enabled: true
+    
+    # 技术指标确认
+    technical_confirmation: true
+    
+    # 市场状态过滤
+    market_regime_filter: true
+    
+    # 波动率过滤
+    volatility_filter:
+      enabled: true
+      max_volatility: 0.10
+  
+  # 出场条件
+  exit_conditions:
+    # AI出场信号
+    ai_exit_signal: true
+    
+    # 时间基出场
+    time_based_exit:
+      enabled: false
+      max_holding_hours: 72
+    
+    # 技术指标出场
+    technical_exit: true
+
+# 监控与日志配置
+monitoring_config:
+  # 日志配置
+  logging:
+    # 日志级别: "DEBUG", "INFO", "WARNING", "ERROR"
+    level: "INFO"
+    
+    # 日志文件路径
+    file_path: "./logs/trading_bot.log"
+    
+    # 是否输出到控制台
+    console_output: true
+  
+  # 性能监控
+  performance:
+    # 启用实时监控
+    enabled: true
+    
+    # 监控指标
+    metrics:
+      # 收益率
+      - "returns"
+      # 最大回撤
+      - "drawdown"
+      # 夏普比率
+      - "sharpe_ratio"
+      # 盈利率
+      - "win_rate"
+      # 获利因子
+      - "profit_factor"
+    
+    # 报告生成间隔（小时）
+    report_interval: 24
+  
+  # 告警配置
+  alerts:
+    # 邮箱告警
+    email_alerts:
+      enabled: false
+      smtp_server: "smtp.gmail.com"
+      smtp_port: 587
+      sender_email: ""
+      sender_password: ""
+      receiver_emails: []
+    
+    # 流平台告警
+    wechat_alerts:
+      enabled: false
+      bot_token: ""
+      chat_id: ""
+    
+    # 告警条件
+    alert_conditions:
+      # 连续亏损
+      - "large_loss"
+      # 系统错误
+      - "system_error"
+      # 连接断开
+      - "connection_lost"
+      # 异常交易量
+      - "unusual_volume"
+
+# 备份与恢复配置
+backup_config:
+  # 自动备份
+  auto_backup:
+    enabled: true
+    interval_hours: 24
+    keep_backups: 7
+  
+  # 备份内容
+  backup_items:
+    - "config"
+    - "trade_history"
+    - "portfolio_state"
+    - "model_performance"
+  
+  # 备份路径
+  backup_path: "./backups"
+
+# 高级配置
+advanced_config:
+  # 并行处理
+  parallel_processing:
+    enabled: true
+    max_workers: 4
+  
+  # 内存管理
+  memory_management:
+    max_memory_usage: "2G"
+    clear_cache_hours: 1
+  
+  # 调试模式
+  debug_mode: false
+  
+  # 随机种子（用于可重复性）
+  random_seed: 996
+
+# =============================================
+# 配置版本（勿修改）
+config_version: "1.0.0"
+# =============================================
