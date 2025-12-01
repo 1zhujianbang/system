@@ -13,7 +13,7 @@ client = OKXMarketClient(user_config,data_config)
 # 批量导出
 results = client.batch_export_historical_data(
     instIds=["BTC-USDT", "ETH-USDT", "SOL-USDT", "ADA-USDT"],
-    output_dir="./data/history/1H/",
+    output_dir="./models/data/1H/",
     bar="1H",  # 1小时线
     years=5,
     include_technical_indicators=True
@@ -21,7 +21,7 @@ results = client.batch_export_historical_data(
 
 results = client.batch_export_historical_data(
     instIds=["BTC-USDT", "ETH-USDT", "SOL-USDT", "ADA-USDT"],
-    output_dir="./data/history/1D/",
+    output_dir="./models/data/1D/",
     bar="1D",  # 1日线
     years=5,
     include_technical_indicators=True
@@ -29,7 +29,7 @@ results = client.batch_export_historical_data(
 
 results = client.batch_export_historical_data(
     instIds=["BTC-USDT", "ETH-USDT", "SOL-USDT", "ADA-USDT"],
-    output_dir="./data/history/1W/",
+    output_dir="./models/data/1W/",
     bar="1W",  # 周线数据
     years=5,
     include_technical_indicators=True
