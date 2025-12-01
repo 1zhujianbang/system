@@ -15,6 +15,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 ENTITIES_FILE = DATA_DIR / "crypto_entities.json"
 PENDING_ENTITIES_FILE = DATA_DIR / "pending_entities.json"
+EVENT_KEYWORDS_FILE = DATA_DIR / "event_keywords.json"
 STOP_WORDS_FILE = DATA_DIR / "stop_words.txt"
 
 def load_stop_words() -> Set[str]:
@@ -48,15 +49,15 @@ def is_valid_candidate(entity: str) -> bool:
         return False
     return True
 
-EVENT_KEYWORDS = {
-    "regulation": ["监管", "合规", "SEC", "罚款", "禁令", "牌照", "法律"],
-    "hack": ["黑客", "被盗", "漏洞", "攻击", "安全事件"],
-    "listing": ["上线", "上架", "交易对", "支持"],
-    "partnership": ["合作", "战略合作", "联盟", "集成"],
-    "upgrade": ["升级", "主网", "硬分叉", "技术更新"],
-    "market": ["暴跌", "暴涨", "行情", "市值", "价格"],
-    "adoption": ["采用", "支付", "集成到", "企业采用"]
-}
+def load_event_keywords() -> Dict[str, List[str]]:
+    """加载事件关键词库"""
+    if EVENT_KEYWORDS_FILE.exists():
+        with open(EVENT_KEYWORDS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        return {}
+
+EVENT_KEYWORDS = load_event_keywords()
 
 def load_crypto_entities() -> Set[str]:
     if not ENTITIES_FILE.exists():
@@ -104,6 +105,54 @@ def save_pending_entities(candidates: Set[str]):
         json.dump(pending, f, ensure_ascii=False, indent=2)
 
     print(f"📝 初筛后新增 {len(candidates)} 个候选实体到待审核文件")
+
+def _add_concept_to_event_keywords(entity: str, event_keywords: dict) -> dict:
+    """
+    交互式询问是否将 concept 类实体加入事件关键词库
+    返回更新后的 event_keywords 字典
+    """
+    print(f"\n💡 检测到 '{entity}' 被加入 'concepts'，是否也作为事件关键词？")
+    print("[1] 加入现有事件类型")
+    print("[2] 创建新事件类型")
+    print("[3] 不加入事件关键词库")
+
+    while True:
+        choice = input("请选择 (1/2/3): ").strip()
+        if choice == "3":
+            return event_keywords
+        elif choice == "1":
+            print("\n现有事件类型:")
+            event_types = list(event_keywords.keys())
+            for i, et in enumerate(event_types, 1):
+                print(f"  [{i}] {et} → {', '.join(event_keywords[et][:3])}...")
+            try:
+                idx = int(input("选择编号: ").strip()) - 1
+                if 0 <= idx < len(event_types):
+                    target_type = event_types[idx]
+                    if entity not in event_keywords[target_type]:
+                        event_keywords[target_type].append(entity)
+                        print(f"✅ '{entity}' 已加入事件类型 '{target_type}'")
+                    else:
+                        print(f"ℹ️ '{entity}' 已在 '{target_type}' 中")
+                    return event_keywords
+                else:
+                    print("⚠️ 编号超出范围")
+            except ValueError:
+                print("⚠️ 请输入有效数字")
+        elif choice == "2":
+            while True:
+                new_type = input("输入新事件类型名称（如 'governance'）: ").strip()
+                if new_type and re.match(r'^[a-z_][a-z0-9_]*$', new_type):
+                    if new_type in event_keywords:
+                        print(f"⚠️ 事件类型 '{new_type}' 已存在")
+                        continue
+                    event_keywords[new_type] = [entity]
+                    print(f"🆕 创建新事件类型 '{new_type}' 并添加关键词 '{entity}'")
+                    return event_keywords
+                else:
+                    print("⚠️ 事件类型名需为小写字母、数字、下划线，且不能以数字开头")
+        else:
+            print("⚠️ 无效选项，请重试")
 
 def approve_pending_entities():
     """
@@ -174,6 +223,21 @@ def approve_pending_entities():
                         target_cat = categories[idx]
                         approved_updates[entity] = target_cat
                         print(f"✅ '{entity}' 将加入分类 '{target_cat}'")
+                        if target_cat == "concepts":
+                            # 只有当 EVENT_KEYWORDS_FILE 存在或可加载时才处理
+                            try:
+                                with open(EVENT_KEYWORDS_FILE, "r", encoding="utf-8") as f:
+                                    current_event_kw = json.load(f)
+                            except Exception:
+                                current_event_kw = {}
+
+                            updated_event_kw = _add_concept_to_event_keywords(entity, current_event_kw)
+
+                            # 如果有修改，立即保存回文件
+                            if updated_event_kw != current_event_kw:
+                                with open(EVENT_KEYWORDS_FILE, "w", encoding="utf-8") as f:
+                                    json.dump(updated_event_kw, f, ensure_ascii=False, indent=2)
+                                print(f"💾 事件关键词库已更新: {EVENT_KEYWORDS_FILE}")
                         break
                     else:
                         print("⚠️ 编号超出范围，请重试")
@@ -241,6 +305,7 @@ def classify_event_type(title: str, content: str) -> Optional[str]:
     full_text = (title + " " + content) if isinstance(content, str) else title
     if not isinstance(full_text, str):
         return None
+    EVENT_KEYWORDS = load_event_keywords()
     scores = {}
     for event_type, keywords in EVENT_KEYWORDS.items():
         score = sum(1 for kw in keywords if kw in full_text)

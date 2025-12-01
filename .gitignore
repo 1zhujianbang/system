@@ -5,3 +5,4 @@
 *.pth
 __pycache__/
 *.pyc
+*.txt
