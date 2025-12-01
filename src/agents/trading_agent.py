@@ -310,10 +310,10 @@ class TradingAgent:
         print(f"   高频实体: {', '.join(sentiment.get('top_entities', [])[:5])}")
         print(f"   事件分布: {sentiment.get('event_distribution', {})}")
 
-        # 显示最新3条带实体的新闻
+        # 显示最新10条带实体的新闻
         if not df.empty:
             print("\n   最新结构化新闻:")
-            for _, row in df.head(3).iterrows():
+            for _, row in df.head(10).iterrows():
                 title = row.get('title', '无标题')
                 if len(title) > 60:
                     title = title[:57] + '...'
