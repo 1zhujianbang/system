@@ -2,8 +2,10 @@ from ..config.config_manager import TradingConfig
 from ..models.model_loader import ModelLoader
 from ..data.data_collector import OKXMarketClient
 from ..data.news_collector import BlockbeatsNewsCollector, NewsType, Language
+from ..agents.agent1 import Agent1EntityExtractor
 from datetime import datetime, timezone
 import re
+import pandas as pd
 
 class TradingAgent:
     def __init__(self, config: TradingConfig):
@@ -21,6 +23,7 @@ class TradingAgent:
         # 初始化客户端
         self.okx_client = OKXMarketClient(config.user_config, config.data_config)
         self.news_collector = BlockbeatsNewsCollector(language=Language.CN)
+        self.agent1 = None
 
         # 数据存储
         self.market_data = {}  # 历史K线数据
@@ -57,13 +60,19 @@ class TradingAgent:
             # 3. 交易数据初始化 
             self._initialize_trading_data()
 
-            # 4. 新闻数据初始化
+            # 4. 加载智能体1（实体提取器）
+            print("🔍 初始化智能体1（实体提取器）...")
+            auto_update_entities = getattr(self.config.user_config, 'auto_update_entities', False)
+            self.agent1 = Agent1EntityExtractor(auto_update=auto_update_entities)
+            print(f"✅ 智能体1已就绪 (auto_update={auto_update_entities})")
+
+            # 5. 新闻数据初始化
             await self._initialize_news_data()
 
-            # 5. 初始化数据流 (伪代码)
+            # 6. 初始化数据流 (伪代码)
             # self.data_stream = DataStream(self.config.user_config.trading_pairs)
 
-            # 6. 标记为就绪状态
+            # 7. 标记为就绪状态
             self.is_ready = True
             print("AI Trading Agent is now READY.")
 
@@ -75,14 +84,17 @@ class TradingAgent:
             raise
 
     def get_status(self):
+        structured_news = self.news_data.get('structured', pd.DataFrame())
         return {
             "is_ready": self.is_ready,
             "cash": self.config.user_config.cash,
             "risk_appetite": self.config.user_config.risk_appetite,
             "model_used": self.config.modeL_config.model_name,
-            "market_sentiment": self.market_sentiment.get('sentiment', 'unknown'),
-            "news_count": len(self.news_data.get('important', [])),
-            "breaking_news": self.market_sentiment.get('breaking_news_count', 0)
+            "market_sentiment": self.market_sentiment.get('sentiment', 'neutral'),
+            "news_count": len(structured_news),
+            "entities_extracted": sum(len(ents) for ents in structured_news.get('entities', [])),
+            "breaking_news": self.market_sentiment.get('breaking_news_count', 0),
+            "event_types": self.market_sentiment.get('event_distribution', {})
         }
     
     async def cleanup(self):
@@ -232,252 +244,115 @@ class TradingAgent:
                 'initialized': False
             }
     
-    def _analyze_market_sentiment(self, news_list: list) -> dict:
-        """分析市场情绪"""
-        if not news_list:
+    def _analyze_market_sentiment_from_df(self, df: pd.DataFrame) -> dict:
+        """
+        基于智能体1输出的结构化新闻DataFrame分析市场情绪
+        输入: 包含 'event_type', 'entities' 列的DataFrame
+        """
+        if df.empty:
             return {
                 'sentiment_score': 0,
                 'sentiment': 'neutral',
                 'breaking_news_count': 0,
-                'keywords': [],
+                'top_entities': [],
+                'event_distribution': {},
+                'total_news': 0,
                 'last_updated': datetime.now(timezone.utc)
             }
+
+        # 1. 事件类型分布（用于情绪倾向）
+        event_counts = df['event_type'].value_counts().to_dict()
         
-        # 情绪关键词分类
-        positive_keywords = [
-            '上涨', '暴涨', '突破', '利好', '合作', '上线', '通过', '批准', '创新高',
-            'bullish', 'surge', 'breakthrough', 'partnership', 'launch', 'approve'
-        ]
+        # 2. 情绪映射（可配置）
+        BULLISH_EVENTS = {'listing', 'partnership', 'upgrade', 'adoption'}
+        BEARISH_EVENTS = {'regulation', 'hack', 'market'}  # market 可能中性，此处暂归负面
         
-        negative_keywords = [
-            '下跌', '暴跌', '崩盘', '利空', '监管', '黑客', '被盗', '调查', '诉讼',
-            'bearish', 'plunge', 'crash', 'regulation', 'hack', 'lawsuit'
-        ]
+        bullish_score = sum(count for et, count in event_counts.items() if et in BULLISH_EVENTS)
+        bearish_score = sum(count for et, count in event_counts.items() if et in BEARISH_EVENTS)
         
-        high_impact_keywords = [
-            '监管', '政策', '黑客', '被盗', '突破', '暴涨', '暴跌',
-            'regulation', 'policy', 'hack', 'breakthrough', 'surge', 'crash'
-        ]
+        sentiment_score = bullish_score - bearish_score
         
-        # 分析新闻内容
-        sentiment_score = 0
-        breaking_news_count = 0
-        all_keywords = []
-        
-        for news in news_list:
-            title = self._clean_news_text(news.get('title', ''))
-            content = self._clean_news_text(news.get('content', news.get('description', '')))
-            text = f"{title} {content}"
-            
-            # 计算情绪分数
-            positive_count = sum(1 for keyword in positive_keywords if keyword in text)
-            negative_count = sum(1 for keyword in negative_keywords if keyword in text)
-            
-            sentiment_score += (positive_count - negative_count)
-            
-            # 统计重大新闻
-            if any(keyword in text for keyword in high_impact_keywords):
-                breaking_news_count += 1
-            
-            # 收集关键词
-            words = self._extract_meaningful_keywords(text)
-            all_keywords.extend(words)
-        
-        # 确定情绪状态
-        if sentiment_score > 2:
+        if sentiment_score > 1:
             sentiment = 'bullish'
-        elif sentiment_score < -2:
+        elif sentiment_score < -1:
             sentiment = 'bearish'
         else:
             sentiment = 'neutral'
-        
-        # 统计关键词频率
+
+        # 3. 提取高频实体（前10）
+        all_entities = [ent for ents in df['entities'].dropna() for ent in ents]
         from collections import Counter
-        keyword_freq = Counter(all_keywords)
-        meaningful_keywords = [
-            word for word, count in keyword_freq.most_common(20)
-            if self._is_meaningful_keyword(word)
-        ]
-        
+        entity_freq = Counter(all_entities)
+        top_entities = [ent for ent, _ in entity_freq.most_common(10)]
+
+        # 4. 重大新闻计数（定义：非 None event_type 即视为重要）
+        breaking_news_count = df['event_type'].notna().sum()
+
         return {
             'sentiment_score': sentiment_score,
             'sentiment': sentiment,
-            'breaking_news_count': breaking_news_count,
-            'top_keywords': meaningful_keywords[:10],
-            'total_news': len(news_list),
+            'breaking_news_count': int(breaking_news_count),
+            'top_entities': top_entities,
+            'event_distribution': event_counts,
+            'total_news': len(df),
             'last_updated': datetime.now(timezone.utc)
-        }
-    
-    def _clean_news_text(self, text: str) -> str:
-        """清理新闻文本，移除HTML标签和无意义内容"""
-        if not text:
-            return ""
-        
-        import re
-        
-        # 移除HTML标签
-        text = re.sub(r'<[^>]+>', ' ', text)
-        
-        # 移除URL
-        text = re.sub(r'https?://\S+', ' ', text)
-        
-        # 移除常见的无意义属性
-        meaningless_patterns = [
-            r'alt="[^"]*"',
-            r'data-href="[^"]*"',
-            r'style="[^"]*"',
-            r'class="[^"]*"',
-            r'width="[^"]*"',
-            r'height="[^"]*"',
-            r'src="[^"]*"',
-            r'text-align:\s*\w*',
-            r'display:\s*\w*',
-            r'float:\s*\w*',
-            r'position:\s*\w*',
-            r'margin:\s*[^;]*;?',
-            r'padding:\s*[^;]*;?',
-            r'font-size:\s*[^;]*;?',
-            r'color:\s*[^;]*;?',
-            r'background:\s*[^;]*;?',
-        ]
-        
-        for pattern in meaningless_patterns:
-            text = re.sub(pattern, ' ', text)
-        
-        # 移除多余的空格
-        text = re.sub(r'\s+', ' ', text).strip()
-        
-        return text
-
-    def _extract_meaningful_keywords(self, text: str) -> list:
-        """从文本中提取有意义的关键词"""
-        if not text:
-            return []
-        
-        # 清理文本
-        clean_text = self._clean_news_text(text)
-        
-        # 分词（简单的空格分词，你可以根据需要替换为更复杂的分词器）
-        words = clean_text.split()
-        
-        # 过滤条件
-        meaningful_words = []
-        for word in words:
-            word_lower = word.lower().strip('.,!?;:"\'()[]{}')
-            
-            # 过滤条件
-            if (len(word_lower) >= 2 and                    # 至少2个字符
-                word_lower not in self._get_stop_words() and # 不在停用词列表中
-                not word_lower.isdigit() and                 # 不是纯数字
-                not re.match(r'^[0-9\.]+$', word_lower) and # 不是数字和点的组合
-                not re.match(r'^[^a-zA-Z0-9\u4e00-\u9fff]+$', word_lower)):  # 不是纯符号
-                meaningful_words.append(word_lower)
-        
-        return meaningful_words
-
-    def _is_meaningful_keyword(self, keyword: str) -> bool:
-        """判断关键词是否有意义"""
-        if not keyword or len(keyword) < 2:
-            return False
-        
-        # 无意义关键词列表
-        meaningless_words = {
-            'alt', 'data', 'href', 'style', 'text', 'align', 'center', 'img',
-            'width', 'height', 'src', 'class', 'border', 'margin', 'padding',
-            'font', 'size', 'color', 'background', 'display', 'float', 'position',
-            'absolute', 'relative', 'block', 'inline', 'flex', 'grid', 'https',
-            'http', 'www', 'com', 'org', 'io', 'net', 'pump', 'fun', 'br', 'div',
-            'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'b', 'i',
-            'pump.fun', 'upbit', 'hyperliquid', 'monad', 'naver',
-            'binance', 'okx', 'kucoin', 'gate.io', 'mexc', 'bybit',
-            'uniswap', 'pancakeswap', 'sushiswap', 'curve', 'balancer',
-            'metamask', 'trustwallet', 'coinbase', 'kraken', 'bitfinex'
-        }
-        
-        return (keyword not in meaningless_words and
-            not keyword.startswith(('0x', '#', '@', '.', '-', '_')) and
-            not keyword.endswith(('.com', '.org', '.io', '.net', '.fun')) and
-            len(keyword) <= 20 and
-            not self._is_crypto_exchange(keyword) and
-            not self._is_defi_platform(keyword) and 
-            not self._is_common_company(keyword)
-        )
-    
-    def _is_crypto_exchange(self, keyword: str) -> bool:
-        """判断是否为加密货币交易所名称"""
-        crypto_exchanges = {
-            'upbit', 'binance', 'okx', 'kucoin', 'gate', 'mexc', 'bybit',
-            'coinbase', 'kraken', 'bitfinex', 'huobi', 'bitstamp', 'gemini',
-            'bithumb', 'coinone', 'korbit', 'probit'
-        }
-        return keyword.lower() in crypto_exchanges
-
-    def _is_defi_platform(self, keyword: str) -> bool:
-        """判断是否为DeFi平台名称"""
-        defi_platforms = {
-            'pump.fun', 'hyperliquid', 'uniswap', 'pancakeswap', 'sushiswap',
-            'curve', 'balancer', 'aave', 'compound', 'makerdao', 'yearn',
-            'synthetix', 'dydx', 'perp', 'gmx'
-        }
-        return keyword.lower() in defi_platforms
-
-    def _is_common_company(self, keyword: str) -> bool:
-        """判断是否为常见公司名称"""
-        common_companies = {
-            'naver', 'kakao', 'samsung', 'lg', 'hyundai', 'google', 'apple',
-            'microsoft', 'amazon', 'facebook', 'twitter', 'telegram', 'discord'
-        }
-        return keyword.lower() in common_companies
-
-    def _get_stop_words(self) -> set:
-        """获取停用词列表"""
-        return {
-            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-            'of', 'with', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been',
-            'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-            'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these',
-            'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him',
-            'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their',
-            '的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都',
-            '一', '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会',
-            '着', '没有', '看', '好', '自己', '知道', '可以', '如', '但', '那'
         }
 
     def _print_news_summary(self):
-        """打印新闻摘要"""
+        """打印新闻摘要（基于结构化数据）"""
         sentiment = self.market_sentiment
-        important_news = self.news_data.get('important', [])
+        df = self.news_data.get('structured', pd.DataFrame())
         
         print("\n📰 新闻数据摘要:")
         print(f"   总新闻数: {sentiment.get('total_news', 0)}")
         print(f"   市场情绪: {sentiment.get('sentiment', 'unknown')} (分数: {sentiment.get('sentiment_score', 0)})")
         print(f"   重大新闻: {sentiment.get('breaking_news_count', 0)} 条")
-        print(f"   热门关键词: {', '.join(sentiment.get('top_keywords', [])[:5])}")
-        
-        # 显示最新3条重要新闻
-        if important_news:
-            print("\n   最新重要新闻:")
-            for i, news in enumerate(important_news[:3], 1):
-                title = news.get('title', '无标题')
-                # 截断过长的标题
+        print(f"   高频实体: {', '.join(sentiment.get('top_entities', [])[:5])}")
+        print(f"   事件分布: {sentiment.get('event_distribution', {})}")
+
+        # 显示最新3条带实体的新闻
+        if not df.empty:
+            print("\n   最新结构化新闻:")
+            for _, row in df.head(3).iterrows():
+                title = row.get('title', '无标题')
                 if len(title) > 60:
                     title = title[:57] + '...'
-                print(f"     {i}. {title}")
+                entities = ', '.join(row['entities']) if row['entities'] else '无'
+                event = row['event_type'] or 'unknown'
+                print(f"     [{event}] {title} | 实体: {entities}")
 
     async def _update_news_core(self):
-        """新闻数据核心更新逻辑 - 供初始化和更新共用"""
+        """新闻数据核心更新逻辑"""
+        # 1. 获取原始新闻列表
         important_news = await self.news_collector.get_latest_important_news(limit=20)
-        self.news_data['important'] = important_news
 
-        # 分析市场情绪
-        self.market_sentiment = self._analyze_market_sentiment(important_news)
-        
-        # 更新交易对相关新闻
+        # 2. 转为DataFrame
+        df_raw = self.news_collector.news_to_dataframe(important_news)
+
+        if df_raw.empty:
+            self.news_data['structured'] = pd.DataFrame()
+            self.market_sentiment = self._analyze_market_sentiment([])
+            return
+
+        # 3. 调用智能体1进行实体与事件类型提取
+        df_enriched = self.agent1.process(df_raw)
+
+        # 4. 保存结构化新闻数据
+        self.news_data['structured'] = df_enriched
+
+        # 5. 更新市场情绪
+        self.market_sentiment = self._analyze_market_sentiment_from_df(df_enriched)
+
+        # 6. （可选）为每个交易对保存关联新闻（后续可基于 entities 过滤）
         trading_pairs = self.okx_client.get_trading_pairs()
         for pair in trading_pairs:
-            symbol_keyword = pair.split('-')[0]
-            related_news = await self.news_collector.search_news_by_keyword(symbol_keyword, limit=10)
-            self.news_data[pair] = related_news
+            symbol = pair.split('-')[0].upper()
+            # 占位：后续可由智能体2基于图谱扩展
+            self.news_data[pair] = {
+                'symbol': symbol,
+                'related_entities': [symbol],  # 初始假设符号即实体
+                'news_df': df_enriched[df_enriched['entities'].apply(lambda ents: symbol in ents)]
+            }
 
     async def update_news_data(self):
         """更新新闻数据"""
@@ -501,3 +376,33 @@ class TradingAgent:
         except Exception as e:
             print(f"❌ 新闻数据更新失败: {str(e)}")
             self.news_data['last_update_error'] = str(e)
+
+    # ======================
+    # 🧠 智能体2 & 知识图谱 占位区
+    # ======================
+
+    async def _expand_news_with_kg(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        【占位】智能体2：基于知识图谱扩展相关新闻
+        输入：含 entities 的 DataFrame
+        输出：增强后的 DataFrame（含 expanded_entities, related_news_ids 等）
+        """
+        # TODO: 实现基于 Neo4j / 内存图的关联扩展
+        print("🚧 智能体2（KG扩展）尚未实现")
+        return df
+
+    def _build_temporal_knowledge_graph(self):
+        """
+        【占位】构建时序知识图谱（用于路径推理）
+        """
+        print("🚧 知识图谱构建模块尚未实现")
+        pass
+
+    async def update_knowledge_graph(self):
+        """
+        【占位】主入口：更新知识图谱
+        """
+        if not self.is_ready or self.news_data.get('structured') is None:
+            return
+        await self._expand_news_with_kg(self.news_data['structured'])
+        self._build_temporal_knowledge_graph()

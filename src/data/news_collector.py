@@ -16,6 +16,12 @@ import aiodns
 loop = asyncio.get_event_loop()
 resolver = aiodns.DNSResolver(loop=loop)
 
+def _json_serializer(obj):
+    """支持 datetime 的 JSON 序列化辅助函数"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
 class NewsType(Enum):
     """新闻类型枚举"""
     FLASH = "flash"  # 快讯
@@ -336,7 +342,11 @@ class BlockbeatsNewsCollector:
                 "create_time": news.get("formatted_time", ""),
                 "timestamp": news.get("datetime"),
                 "is_original": news.get("is_original", False),
-                "column": news.get("column", "")
+                "column": news.get("column", ""),
+                # === 新增字段：用于知识图谱构建 ===
+                "entities": [],          # 预留：由智能体1填充实体列表，如 ["BTC", "以太坊"]
+                "event_type": None,      # 预留：事件类型，如 "regulation", "hack"
+                "raw_json": json.dumps(news, default=_json_serializer, ensure_ascii=False)  # 预留：原始数据回溯
             })
         
         df = pd.DataFrame(processed_news)

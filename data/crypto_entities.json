@@ -1,0 +1,43 @@
+{
+  "crypto_assets": [
+    "ADA",
+    "BNB",
+    "BTC",
+    "DOGE",
+    "ETH",
+    "SHIB",
+    "SOL",
+    "USDC",
+    "USDT",
+    "XRP",
+    "以太坊",
+    "柴犬币",
+    "比特币",
+    "狗狗币",
+    "瑞波币",
+    "索拉纳"
+  ],
+  "organizations": [
+    "Binance",
+    "Coinbase",
+    "MicroStrategy",
+    "OKX",
+    "SEC",
+    "灰度",
+    "美联储",
+    "贝莱德"
+  ],
+  "concepts": [
+    "DeFi",
+    "ETF",
+    "Gas费",
+    "Layer2",
+    "NFT",
+    "Web3",
+    "公链",
+    "减半",
+    "分红",
+    "空投",
+    "质押"
+  ]
+}

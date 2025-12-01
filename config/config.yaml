@@ -25,6 +25,9 @@ user_config:
   # 是否启用自动交易
   auto_trading: false
 
+  # 是否启用自动更新实体功能
+  auto_update_entities: false  # 默认关闭，需人工审核
+
 # 模型配置(modeL_config中L大写，避免与BaseModel库关键字冲突)
 modeL_config:
   # 模型名称（对应models目录下的模型文件）

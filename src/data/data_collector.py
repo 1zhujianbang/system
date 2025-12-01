@@ -54,8 +54,8 @@ class OKXMarketClient:
     def get_ticker(self, instId: str) -> Optional[Dict]:
         """获取单个交易对行情"""
         try:
-            # result = self.api.market.get_ticker(instId=instId)
-            result = self.api.public.get_history_mark_price_candles(instId=instId)
+            result = self.api.market.get_ticker(instId=instId)
+            # result = self.api.public.get_history_mark_price_candles(instId=instId)
             if result['code'] == '0' and result['data']:
                 return result['data'][0]
             else:
