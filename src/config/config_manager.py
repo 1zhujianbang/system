@@ -12,6 +12,7 @@ class UserConfig(BaseModel):
     base_currency: str = Field(..., min_length=3, max_length=5, description="基础货币代码长度3-5")
     trading_mode: str = Field(..., pattern="^(paper|live)$", description="交易模式必须是 paper/live")
     auto_trading: bool
+    auto_update_entities: bool = False  # 是否启用自动更新实体功能，默认关闭
 
     @field_validator('cash')
     @classmethod

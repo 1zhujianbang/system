@@ -2,7 +2,7 @@ from ..config.config_manager import TradingConfig
 from ..models.model_loader import ModelLoader
 from ..data.data_collector import OKXMarketClient
 from ..data.news_collector import BlockbeatsNewsCollector, NewsType, Language
-from ..agents.agent1 import Agent1EntityExtractor
+from ..agents.agent1 import Agent1EntityExtractor, load_entity_categories
 from datetime import datetime, timezone
 import re
 import pandas as pd
@@ -58,11 +58,11 @@ class TradingAgent:
             print(f"✅ Model {self.config.modeL_config.model_name} loaded successfully.")
 
             # 3. 交易数据初始化 
-            self._initialize_trading_data()
+            # self._initialize_trading_data()
 
             # 4. 加载智能体1（实体提取器）
             print("🔍 初始化智能体1（实体提取器）...")
-            auto_update_entities = getattr(self.config.user_config, 'auto_update_entities', False)
+            auto_update_entities = getattr(self.config.user_config, 'auto_update_entities')
             self.agent1 = Agent1EntityExtractor(auto_update=auto_update_entities)
             print(f"✅ 智能体1已就绪 (auto_update={auto_update_entities})")
 
@@ -254,22 +254,29 @@ class TradingAgent:
                 'sentiment_score': 0,
                 'sentiment': 'neutral',
                 'breaking_news_count': 0,
-                'top_entities': [],
+                'top_entities': [],          # 非行为实体
+                'top_actions': [],           # 行为词
                 'event_distribution': {},
                 'total_news': 0,
                 'last_updated': datetime.now(timezone.utc)
             }
 
-        # 1. 事件类型分布（用于情绪倾向）
+        # 加载分类（含 actions）
+        try:
+            from ..agents.agent1 import load_entity_categories
+            categories = load_entity_categories()
+            ACTIONS_SET = categories.get("actions", set())
+        except Exception:
+            ACTIONS_SET = set()
+
+        # 1. 事件类型分布
         event_counts = df['event_type'].value_counts().to_dict()
         
-        # 2. 情绪映射（可配置）
+        # 2. 情绪评分（不变）
         BULLISH_EVENTS = {'listing', 'partnership', 'upgrade', 'adoption'}
-        BEARISH_EVENTS = {'regulation', 'hack', 'market'}  # market 可能中性，此处暂归负面
-        
+        BEARISH_EVENTS = {'regulation', 'hack', 'market'}
         bullish_score = sum(count for et, count in event_counts.items() if et in BULLISH_EVENTS)
         bearish_score = sum(count for et, count in event_counts.items() if et in BEARISH_EVENTS)
-        
         sentiment_score = bullish_score - bearish_score
         
         if sentiment_score > 1:
@@ -279,13 +286,25 @@ class TradingAgent:
         else:
             sentiment = 'neutral'
 
-        # 3. 提取高频实体（前10）
-        all_entities = [ent for ents in df['entities'].dropna() for ent in ents]
-        from collections import Counter
-        entity_freq = Counter(all_entities)
-        top_entities = [ent for ent, _ in entity_freq.most_common(10)]
+        # 3. 分离实体与行为
+        all_entities_flat = []
+        all_actions_flat = []
+        
+        for ents in df['entities'].dropna():
+            for ent in ents:
+                if ent in ACTIONS_SET:
+                    all_actions_flat.append(ent)
+                else:
+                    all_entities_flat.append(ent)
 
-        # 4. 重大新闻计数（定义：非 None event_type 即视为重要）
+        from collections import Counter
+        entity_freq = Counter(all_entities_flat)
+        action_freq = Counter(all_actions_flat)
+
+        top_entities = [ent for ent, _ in entity_freq.most_common(10)]
+        top_actions = [act for act, _ in action_freq.most_common(10)]
+
+        # 4. 重大新闻计数
         breaking_news_count = df['event_type'].notna().sum()
 
         return {
@@ -293,6 +312,7 @@ class TradingAgent:
             'sentiment': sentiment,
             'breaking_news_count': int(breaking_news_count),
             'top_entities': top_entities,
+            'top_actions': top_actions,
             'event_distribution': event_counts,
             'total_news': len(df),
             'last_updated': datetime.now(timezone.utc)
@@ -307,19 +327,39 @@ class TradingAgent:
         print(f"   总新闻数: {sentiment.get('total_news', 0)}")
         print(f"   市场情绪: {sentiment.get('sentiment', 'unknown')} (分数: {sentiment.get('sentiment_score', 0)})")
         print(f"   重大新闻: {sentiment.get('breaking_news_count', 0)} 条")
-        print(f"   高频实体: {', '.join(sentiment.get('top_entities', [])[:5])}")
+        
+        # 分别打印高频实体和高频行为
+        top_ents = sentiment.get('top_entities', [])
+        top_acts = sentiment.get('top_actions', [])
+        
+        print(f"   高频实体: {', '.join(top_ents[:5]) if top_ents else '无'}")
+        print(f"   高频行为: {', '.join(top_acts[:5]) if top_acts else '无'}")
+        
         print(f"   事件分布: {sentiment.get('event_distribution', {})}")
 
-        # 显示最新10条带实体的新闻
+        # 显示最新10条新闻（也使用 ACTIONS_SET 分离）
+        try:
+            from ..agents.agent1 import load_entity_categories
+            ACTIONS_SET = load_entity_categories().get("actions", set())
+        except Exception:
+            ACTIONS_SET = set()
+
         if not df.empty:
             print("\n   最新结构化新闻:")
             for _, row in df.head(10).iterrows():
                 title = row.get('title', '无标题')
                 if len(title) > 60:
                     title = title[:57] + '...'
-                entities = ', '.join(row['entities']) if row['entities'] else '无'
+                
+                raw_entities = row['entities'] if row['entities'] else []
+                non_action_entities = [e for e in raw_entities if e not in ACTIONS_SET]
+                actions = [e for e in raw_entities if e in ACTIONS_SET]
+                
+                entity_str = ', '.join(non_action_entities) if non_action_entities else '无'
+                action_str = ', '.join(actions) if actions else '无'
+                
                 event = row['event_type'] or 'unknown'
-                print(f"     [{event}] {title} | 实体: {entities}")
+                print(f"     [{event}] {title} | 实体: {entity_str} | 行为: {action_str}")
 
     async def _update_news_core(self):
         """新闻数据核心更新逻辑"""
