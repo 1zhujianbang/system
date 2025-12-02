@@ -422,18 +422,18 @@ class Agent1EntityExtractor:
         # 🔑 3. 发现新实体并收集上下文（用于 LLM 二筛）
         new_entities, context_map = self.discover_new_entities(result_df, min_freq=2)
 
-        # 🤖 4. LLM 二筛（仅非自动模式）
-        final_valid_entities = set(self.known_entities)  # 已知实体始终有效
+         # 🤖 4. LLM 二筛（仅非自动模式）
+        final_valid_entities = set(self.known_entities)
         if new_entities and not self.auto_update:
-            filtered_new = llm_second_pass_filter(new_entities, context_map)
+            filtered_new, _ = llm_second_pass_filter(new_entities, context_map)
             final_valid_entities.update(filtered_new)
-            
-            # 保存待审核实体
             save_pending_entities(filtered_new)
+
         elif new_entities and self.auto_update:
-            # 自动模式：直接接受新实体
-            final_valid_entities.update(new_entities)
-            self._save_entities_to_main(new_entities)
+            # 自动模式：使用 LLM 的分类结果
+            filtered_new, category_map = llm_second_pass_filter(new_entities, context_map)
+            final_valid_entities.update(filtered_new)
+            self._save_entities_to_main(filtered_new, category_map)
 
         # ✅ 5. 【关键】用最终有效实体过滤每条新闻的 entities 列
         result_df['entities'] = result_df['entities'].apply(
@@ -446,30 +446,41 @@ class Agent1EntityExtractor:
         
         return result_df
 
-    def _save_entities_to_main(self, new_entities: Set[str]):
-        """将新实体合并到主知识库（仅当 auto_update=True 时调用）"""
+    def _save_entities_to_main(self, new_entities: Set[str], category_map: Dict[str, str]):
+        """将新实体按 LLM 预测的类别合并到主知识库"""
         with open(ENTITIES_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        for ent in new_entities:
-            if ent.isupper() and len(ent) <= 6:
-                data["crypto_assets"].append(ent)
-            elif any(kw in ent for kw in ["交易所", "币", "Coin"]):
-                data["crypto_assets"].append(ent)
-            else:
-                data["concepts"].append(ent)
+        # 确保所有目标类别存在
+        for cat in set(category_map.values()):
+            if cat not in data:
+                data[cat] = []
 
+        # 按类别添加
+        for ent in new_entities:
+            cat = category_map.get(ent, "concepts")
+            if cat not in data:
+                cat = "concepts"
+            if ent not in data[cat]:
+                data[cat].append(ent)
+
+        # 去重 + 排序
         for key in data:
             data[key] = sorted(list(set(data[key])))
 
         with open(ENTITIES_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"✅ 自动新增 {len(new_entities)} 个实体到主知识库: {sorted(new_entities)}")
+        print(f"✅ 自动新增 {len(new_entities)} 个实体到主知识库（按 LLM 分类）:")
+        for ent in sorted(new_entities):
+            print(f"   - '{ent}' → {category_map.get(ent, 'concepts')}")
 
 
 
-def llm_second_pass_filter(candidates: Set[str], context_map: Dict[str, List[str]]) -> Set[str]:
+def llm_second_pass_filter(
+    candidates: Set[str], 
+    context_map: Dict[str, List[str]]
+) -> tuple[Set[str], Dict[str, str]]:  # ← 返回 (有效实体集合, 实体→类别映射)
     """
     使用 DeepSeek API 对初筛候选实体进行二次过滤（批量模式）。
     - 一次性发送所有候选实体
@@ -480,7 +491,7 @@ def llm_second_pass_filter(candidates: Set[str], context_map: Dict[str, List[str
         from openai import OpenAI
     except ImportError:
         print("⚠️ openai 库未安装，跳过 LLM 二筛")
-        return candidates
+        return candidates, {e: "concepts" for e in candidates}
 
     # 🔑 加载 API Key
     AGENT_DIR = Path(__file__).parent
@@ -528,11 +539,11 @@ def llm_second_pass_filter(candidates: Set[str], context_map: Dict[str, List[str
 
 请仅输出一个 JSON 对象，格式如下：
 {{
-  "entity1": {{
+  "entity_name1": {{
     "is_valid": true,
     "category": "crypto_assets|organizations|concepts|persons|actions|events|other"
   }},
-  "entity2": {{
+  "entity_name2": {{
     "is_valid": false,
     "category": "other"
   }}
@@ -604,13 +615,27 @@ def llm_second_pass_filter(candidates: Set[str], context_map: Dict[str, List[str
             else:
                 print("ℹ️ 无效词均已存在于停用词库，无需更新")
 
+        category_map = {}
+        for entity in sorted_entities:
+            entry = result_dict.get(entity)
+            if isinstance(entry, dict) and entry.get("is_valid") is True:
+                cat = entry.get("category", "concepts")  # 默认 fallback
+                # 确保 category 是主知识库中已有的 key，否则归入 concepts
+                if cat not in ["crypto_assets", "organizations", "concepts", "persons", "actions", "events"]:
+                    cat = "concepts"
+                category_map[entity] = cat
+
+        # 对 missing_entities，也给默认类别（比如 concepts）
+        for ent in missing_entities:
+            category_map[ent] = "concepts"
+
         print(f"✅ DeepSeek LLM 二筛完成：{len(valid_entities)}/{total} 个实体通过")
-        return valid_entities
+        return valid_entities, category_map 
 
     except Exception as e:
         print(f"❌ DeepSeek 批量调用失败: {e}")
-        print("⚠️ 安全降级：保留所有候选实体")
-        return candidates
+        print("⚠️ 安全降级：保留所有候选实体，类别设为 concepts")
+        return candidates, {e: "concepts" for e in candidates}
 
 if __name__ == "__main__":
     approve_pending_entities()

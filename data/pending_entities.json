@@ -1,1 +1,17 @@
-{}
+{
+  "回升": {
+    "first_seen": "2025-12-02T10:35:56.304249+00:00",
+    "status": "pending",
+    "source_contexts": []
+  },
+  "TVL": {
+    "first_seen": "2025-12-02T10:35:56.304249+00:00",
+    "status": "pending",
+    "source_contexts": []
+  },
+  "亿美元以": {
+    "first_seen": "2025-12-02T10:35:56.304249+00:00",
+    "status": "pending",
+    "source_contexts": []
+  }
+}
