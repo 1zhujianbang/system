@@ -545,12 +545,13 @@ def llm_second_pass_filter(candidates: Set[str], context_map: Dict[str, List[str
 
     try:
         response = client.chat.completions.create(
-            model="deepseek-chat",
-            # extra_body={"thinking": {"type": "enabled"}},
+            # model="deepseek-chat",
+            # max_tokens=8192,
+            model="deepseek-reasoner",
+            extra_body={"thinking": {"type": "enabled"}},
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=8192,
-            timeout=150,
+            max_tokens=64000,
+            timeout=600,
             stream=False
         )
         content = response.choices[0].message.content.strip()

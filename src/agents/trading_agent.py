@@ -364,7 +364,7 @@ class TradingAgent:
     async def _update_news_core(self):
         """新闻数据核心更新逻辑"""
         # 1. 获取原始新闻列表
-        important_news = await self.news_collector.get_latest_important_news(limit=20)
+        important_news = await self.news_collector.get_latest_important_news(limit=200)
 
         # 2. 转为DataFrame
         df_raw = self.news_collector.news_to_dataframe(important_news)
