@@ -49,7 +49,7 @@
 ```powershell
 python src/agents/agent1.py
 ```
-
+在user_config类内配置是否自动更新
 
 ### 项目结构
 
