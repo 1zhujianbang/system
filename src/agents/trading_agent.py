@@ -2,19 +2,21 @@ from ..config.config_manager import TradingConfig
 from ..models.model_loader import ModelLoader
 from ..data.data_collector import OKXMarketClient
 from ..data.news_collector import BlockbeatsNewsCollector, NewsType, Language
-from ..agents.agent1 import Agent1EntityExtractor, load_entity_categories
+from ..agents.agent1 import process_news_stream, ENTITIES_FILE, ABSTRACT_MAP_FILE, RAW_NEWS_DIR
 from datetime import datetime, timezone
 import re
 import pandas as pd
+import json
+import os
+from pathlib import Path
+import uuid
 
 class TradingAgent:
     def __init__(self, config: TradingConfig):
         self.config = config
         self.model = None
         self.portfolio = {
-            # 余额
             'cash': config.user_config.cash,
-            # 持仓
             'positions': {},
         }
         self.is_ready = False
@@ -23,14 +25,13 @@ class TradingAgent:
         # 初始化客户端
         self.okx_client = OKXMarketClient(config.user_config, config.data_config)
         self.news_collector = BlockbeatsNewsCollector(language=Language.CN)
-        self.agent1 = None
 
         # 数据存储
-        self.market_data = {}  # 历史K线数据
-        self.realtime_data = {}  # 实时行情数据
-        self.technical_data = {}  # 技术指标数据
-        self.news_data = {}  # 新闻数据
-        self.market_sentiment = {}  # 市场情绪分析
+        self.market_data = {}
+        self.realtime_data = {}
+        self.technical_data = {}
+        self.news_data = {}
+        self.market_sentiment = {}
 
     async def initialize(self):
         """初始化Agent的核心流程"""
@@ -60,19 +61,13 @@ class TradingAgent:
             # 3. 交易数据初始化 
             # self._initialize_trading_data()
 
-            # 4. 加载智能体1（实体提取器）
-            print("🔍 初始化智能体1（实体提取器）...")
-            auto_update_entities = getattr(self.config.user_config, 'auto_update_entities')
-            self.agent1 = Agent1EntityExtractor(auto_update=auto_update_entities)
-            print(f"✅ 智能体1已就绪 (auto_update={auto_update_entities})")
-
-            # 5. 新闻数据初始化
+            # 4. 新闻数据初始化
             await self._initialize_news_data()
 
-            # 6. 初始化数据流 (伪代码)
+            # 5. 初始化数据流 (伪代码)
             # self.data_stream = DataStream(self.config.user_config.trading_pairs)
 
-            # 7. 标记为就绪状态
+            # 6. 标记为就绪状态
             self.is_ready = True
             print("AI Trading Agent is now READY.")
 
@@ -94,27 +89,18 @@ class TradingAgent:
             "news_count": len(structured_news),
             "entities_extracted": sum(len(ents) for ents in structured_news.get('entities', [])),
             "breaking_news": self.market_sentiment.get('breaking_news_count', 0),
-            "event_types": self.market_sentiment.get('event_distribution', {})
         }
     
     async def cleanup(self):
-        """清理资源 - 显示关闭所有客户端会话"""
+        """清理资源"""
         if self._cleanup_done:
             return
-            
         print("🧹 清理交易Agent资源...")
-        
         try:
-            # 1. 关闭新闻收集器的会话
             if hasattr(self.news_collector, 'close'):
                 await self.news_collector.close()
-                print("✅ 新闻收集器会话已关闭")
             elif hasattr(self.news_collector, 'session') and self.news_collector.session:
                 await self.news_collector.session.close()
-                print("✅ 新闻收集器会话已关闭")
-            
-            # 2. 拓展
-
         except Exception as e:
             print(f"⚠️ 资源清理过程中出现错误: {e}")
         finally:
@@ -222,201 +208,155 @@ class TradingAgent:
                 print(f"     {display_str}")
 
     async def _initialize_news_data(self):
-        """初始化新闻数据"""
-        print("📰 初始化新闻数据...")
-    
+        """初始化新闻数据：通过 agent1 处理"""
+        print("📰 初始化新闻数据（调用 Agent1）...")
         try:
-            # 使用核心更新逻辑
-            await self._update_news_core()
-            
-            # 初始化特定的设置
-            self.news_data['initialized'] = True
-            self.news_data['first_init_time'] = datetime.now(timezone.utc)
-            
-            # 打印新闻摘要
+            # 1. 获取原始新闻
+            important_news = await self.news_collector.get_latest_important_news(limit=5)
+            if not important_news:
+                print("📭 未获取到重要新闻")
+                self.news_data['structured'] = pd.DataFrame()
+                self.market_sentiment = self._analyze_market_sentiment_from_df(pd.DataFrame())
+                return
+
+            # 2. 生成唯一临时文件名
+            temp_filename = f"temp_{uuid.uuid4().hex}.jsonl"
+            raw_file = RAW_NEWS_DIR / temp_filename
+
+            # 3. 写入 raw_news 目录（供 agent1 读取）
+            with open(raw_file, "w", encoding="utf-8") as f:
+                for idx, news in enumerate(important_news):
+                    # ✅ 正确处理 dict 类型的新闻
+                    title = news.get('title', '').strip()
+                    content_raw = news.get('content', '').strip()
+                    
+                    # 清理 HTML（避免 <p>, <br> 干扰去重和 LLM）
+                    clean_content = re.sub(r'<[^>]+>', '', content_raw).strip()
+                    final_content = clean_content or title  # 兜底
+                    
+                    item = {
+                        "id": str(news.get("id", f"temp_{idx}")),
+                        "title": title,
+                        "content": final_content,
+                        "source": "blockbeats",
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }
+                    f.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+            print(f"✅ 写入 {len(important_news)} 条新闻到 {raw_file.name}")
+
+            # 4. 调用 agent1 主流程
+            process_news_stream()
+
+            # 5. 从 agent1 输出文件构建结构化 DataFrame
+            df_structured = self._build_structured_news_from_agent1_output()
+
+            # 6. 保存并分析
+            self.news_data['structured'] = df_structured
+            self.market_sentiment = self._analyze_market_sentiment_from_df(df_structured)
+
+            # 7. 清理临时文件
+            try:
+                raw_file.unlink()
+                print(f"🗑️  已清理临时文件: {raw_file.name}")
+            except Exception as e:
+                print(f"⚠️  无法删除临时文件: {e}")
+
+            # 8. 打印摘要
             self._print_news_summary()
-            
+
         except Exception as e:
             print(f"❌ 新闻数据初始化失败: {str(e)}")
-            self.news_data = {
-                'important': [], 
-                'error': str(e),
-                'initialized': False
-            }
+            import traceback
+            traceback.print_exc()
+            self.news_data = {'structured': pd.DataFrame(), 'error': str(e)}
+            self.market_sentiment = self._analyze_market_sentiment_from_df(pd.DataFrame())
     
+    def _build_structured_news_from_agent1_output(self) -> pd.DataFrame:
+        """从 agent1 生成的 abstract_map.json 构建结构化 DataFrame"""
+        if not ABSTRACT_MAP_FILE.exists():
+            return pd.DataFrame()
+
+        with open(ABSTRACT_MAP_FILE, "r", encoding="utf-8") as f:
+            abstract_map = json.load(f)
+
+        records = []
+        for abstract, data in abstract_map.items():
+            records.append({
+                "abstract": abstract,
+                "entities": data["entities"],
+                "event_summary": data["event_summary"],
+                "sources": data["sources"],
+                "first_seen": data["first_seen"]
+            })
+
+        if not records:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(records)
+        df["title"] = df["abstract"]
+        df["content"] = df["event_summary"]
+        df["id"] = df.index.astype(str)
+        return df
+
     def _analyze_market_sentiment_from_df(self, df: pd.DataFrame) -> dict:
-        """
-        基于智能体1输出的结构化新闻DataFrame分析市场情绪
-        输入: 包含 'event_type', 'entities' 列的DataFrame
-        """
         if df.empty:
             return {
                 'sentiment_score': 0,
                 'sentiment': 'neutral',
                 'breaking_news_count': 0,
-                'top_entities': [],          # 非行为实体
-                'top_actions': [],           # 行为词
-                'event_distribution': {},
+                'top_entities': [],
                 'total_news': 0,
                 'last_updated': datetime.now(timezone.utc)
             }
 
-        # 加载分类（含 actions）
-        try:
-            from ..agents.agent1 import load_entity_categories
-            categories = load_entity_categories()
-            ACTIONS_SET = categories.get("actions", set())
-        except Exception:
-            ACTIONS_SET = set()
-
-        # 1. 事件类型分布
-        event_counts = df['event_type'].value_counts().to_dict()
-        
-        # 2. 情绪评分（不变）
-        BULLISH_EVENTS = {'listing', 'partnership', 'upgrade', 'adoption'}
-        BEARISH_EVENTS = {'regulation', 'hack', 'market'}
-        bullish_score = sum(count for et, count in event_counts.items() if et in BULLISH_EVENTS)
-        bearish_score = sum(count for et, count in event_counts.items() if et in BEARISH_EVENTS)
-        sentiment_score = bullish_score - bearish_score
-        
-        if sentiment_score > 1:
-            sentiment = 'bullish'
-        elif sentiment_score < -1:
-            sentiment = 'bearish'
-        else:
-            sentiment = 'neutral'
-
-        # 3. 分离实体与行为
-        all_entities_flat = []
-        all_actions_flat = []
-        
+        # 实体统计（用于情绪代理）
+        all_entities = []
         for ents in df['entities'].dropna():
-            for ent in ents:
-                if ent in ACTIONS_SET:
-                    all_actions_flat.append(ent)
-                else:
-                    all_entities_flat.append(ent)
-
+            all_entities.extend(ents)
         from collections import Counter
-        entity_freq = Counter(all_entities_flat)
-        action_freq = Counter(all_actions_flat)
-
+        entity_freq = Counter(all_entities)
         top_entities = [ent for ent, _ in entity_freq.most_common(10)]
-        top_actions = [act for act, _ in action_freq.most_common(10)]
 
-        # 4. 重大新闻计数
-        breaking_news_count = df['event_type'].notna().sum()
+        # 简化情绪：仅基于新闻数量（或可后续接入LLM情感打分）
+        total_news = len(df)
+        sentiment_score = total_news  # 或设为 0 表示中性
+        sentiment = 'active' if total_news > 5 else 'quiet'
 
         return {
             'sentiment_score': sentiment_score,
             'sentiment': sentiment,
-            'breaking_news_count': int(breaking_news_count),
+            'breaking_news_count': total_news,
             'top_entities': top_entities,
-            'top_actions': top_actions,
-            'event_distribution': event_counts,
-            'total_news': len(df),
+            'total_news': total_news,
             'last_updated': datetime.now(timezone.utc)
         }
 
     def _print_news_summary(self):
-        """打印新闻摘要（基于结构化数据）"""
         sentiment = self.market_sentiment
         df = self.news_data.get('structured', pd.DataFrame())
         
         print("\n📰 新闻数据摘要:")
         print(f"   总新闻数: {sentiment.get('total_news', 0)}")
-        print(f"   市场情绪: {sentiment.get('sentiment', 'unknown')} (分数: {sentiment.get('sentiment_score', 0)})")
+        print(f"   市场活跃度: {sentiment.get('sentiment', 'unknown')}")
         print(f"   重大新闻: {sentiment.get('breaking_news_count', 0)} 条")
-        
-        # 分别打印高频实体和高频行为
-        top_ents = sentiment.get('top_entities', [])
-        top_acts = sentiment.get('top_actions', [])
-        
-        print(f"   高频实体: {', '.join(top_ents[:5]) if top_ents else '无'}")
-        print(f"   高频行为: {', '.join(top_acts[:5]) if top_acts else '无'}")
-        
-        print(f"   事件分布: {sentiment.get('event_distribution', {})}")
-
-        # 显示最新10条新闻（也使用 ACTIONS_SET 分离）
-        try:
-            from ..agents.agent1 import load_entity_categories
-            ACTIONS_SET = load_entity_categories().get("actions", set())
-        except Exception:
-            ACTIONS_SET = set()
+        print(f"   高频实体: {', '.join(sentiment.get('top_entities', [])[:5])}")
 
         if not df.empty:
             print("\n   最新结构化新闻:")
-            for _, row in df.head(10).iterrows():
-                title = row.get('title', '无标题')
-                if len(title) > 60:
-                    title = title[:57] + '...'
-                
-                raw_entities = row['entities'] if row['entities'] else []
-                non_action_entities = [e for e in raw_entities if e not in ACTIONS_SET]
-                actions = [e for e in raw_entities if e in ACTIONS_SET]
-                
-                entity_str = ', '.join(non_action_entities) if non_action_entities else '无'
-                action_str = ', '.join(actions) if actions else '无'
-                
-                event = row['event_type'] or 'unknown'
-                print(f"     [{event}] {title} | 实体: {entity_str} | 行为: {action_str}")
-
-    async def _update_news_core(self):
-        """新闻数据核心更新逻辑"""
-        # 1. 获取原始新闻列表
-        important_news = await self.news_collector.get_latest_important_news(limit=200)
-
-        # 2. 转为DataFrame
-        df_raw = self.news_collector.news_to_dataframe(important_news)
-
-        if df_raw.empty:
-            self.news_data['structured'] = pd.DataFrame()
-            self.market_sentiment = self._analyze_market_sentiment([])
-            return
-
-        # 3. 调用智能体1进行实体与事件类型提取
-        df_enriched = self.agent1.process(df_raw)
-
-        # 4. 保存结构化新闻数据
-        self.news_data['structured'] = df_enriched
-
-        # 5. 更新市场情绪
-        self.market_sentiment = self._analyze_market_sentiment_from_df(df_enriched)
-
-        # 6. （可选）为每个交易对保存关联新闻（后续可基于 entities 过滤）
-        trading_pairs = self.okx_client.get_trading_pairs()
-        for pair in trading_pairs:
-            symbol = pair.split('-')[0].upper()
-            # 占位：后续可由智能体2基于图谱扩展
-            self.news_data[pair] = {
-                'symbol': symbol,
-                'related_entities': [symbol],  # 初始假设符号即实体
-                'news_df': df_enriched[df_enriched['entities'].apply(lambda ents: symbol in ents)]
-            }
+            for _, row in df.head(5).iterrows():
+                title = row.get('abstract', '')[:60]
+                entities = ', '.join(row.get('entities', []))
+                print(f"     {title} | 实体: {entities}")
 
     async def update_news_data(self):
-        """更新新闻数据"""
+        """更新新闻数据（复用初始化逻辑）"""
         if not self.is_ready:
             return
-        
-        try:
-            print("🔄 更新新闻数据...")
-            
-            # 使用共用的核心更新逻辑
-            await self._update_news_core()
-            
-            # 更新特定的处理
-            self.news_data['last_updated'] = datetime.now(timezone.utc)
-            self.news_data['update_count'] = self.news_data.get('update_count', 0) + 1
-        
-            self._print_news_summary()
-            
-            print(f"✅ 新闻数据更新完成")
-            
-        except Exception as e:
-            print(f"❌ 新闻数据更新失败: {str(e)}")
-            self.news_data['last_update_error'] = str(e)
-
+        print("🔄 更新新闻数据...")
+        await self._initialize_news_data()
+        print("✅ 新闻数据更新完成")
+    
     # ======================
     # 🧠 智能体2 & 知识图谱 占位区
     # ======================
