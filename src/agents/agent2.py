@@ -24,6 +24,7 @@ from ..utils.tool_function import tools
 from ..data.api_client import DataAPIPool
 from ..data.news_collector import NewsType
 from .agent1 import llm_extract_events, update_entities, update_abstract_map, NewsDeduplicator
+from .kg_interface import refresh_graph  # 导入知识图谱刷新功能
 
 # 初始化工具
 tools = tools()
@@ -339,6 +340,14 @@ async def process_expanded_news(expanded_news: List[Dict]) -> int:
                     all_entities_original = all_entities  # 使用实体名称作为原始词
                     update_entities(all_entities, all_entities_original, source, published_at)
                     update_abstract_map(extracted, source, published_at)
+                    
+                    # 异步更新知识图谱
+                    try:
+                        import threading
+                        threading.Thread(target=refresh_graph, daemon=True).start()
+                    except Exception as e:
+                        tools.log(f"⚠️ 异步更新知识图谱失败: {e}")
+                        
                     processed_count += 1
                     
         except Exception as e:

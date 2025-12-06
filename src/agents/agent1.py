@@ -8,6 +8,7 @@
 - 排除：代币名称、技术术语、抽象概念、情绪词、泛称
 - 提取即自动写入 entities.json，无需人工审核
 - 每个事件生成唯一摘要，并关联实体与事件描述
+- 自动更新知识图谱，维护实体-事件关系网络
 """
 
 import os
@@ -26,6 +27,7 @@ from dotenv import load_dotenv
 from ..utils.tool_function import tools
 tools = tools()
 from .api_client import LLMAPIPool
+from .kg_interface import refresh_graph  # 导入知识图谱刷新功能
 API_POOL = None
 
 def init_api_pool():
@@ -224,6 +226,9 @@ def update_entities(entities: List[str], entities_original: List[str], source: s
         with open(tools.ENTITIES_FILE, "r", encoding="utf-8") as f:
             existing = json.load(f)
     
+    # 检查是否需要更新
+    needs_update = False
+    
     # 确保两个数组长度一致
     for ent, ent_original in zip(entities, entities_original):
         if ent not in existing:
@@ -232,27 +237,39 @@ def update_entities(entities: List[str], entities_original: List[str], source: s
                 "sources": [source],
                 "original_forms": [ent_original]  # 新增：保存原始语言表述
             }
+            needs_update = True
         else:
             # 如果已有 first_seen，且新闻时间更早，则更新为更早的时间
             try:
                 old_ts = existing[ent].get("first_seen")
                 if old_ts and base_ts and base_ts < old_ts:
                     existing[ent]["first_seen"] = base_ts
+                    needs_update = True
             except Exception:
                 # 异常时不强制更新，避免破坏已有数据
                 pass
 
             if source not in existing[ent]["sources"]:
                 existing[ent]["sources"].append(source)
+                needs_update = True
             
             # 更新原始语言表述（去重）
             if "original_forms" not in existing[ent]:
                 existing[ent]["original_forms"] = []
             if ent_original not in existing[ent]["original_forms"]:
                 existing[ent]["original_forms"].append(ent_original)
+                needs_update = True
     
-    with open(tools.ENTITIES_FILE, "w", encoding="utf-8") as f:
-        json.dump(existing, f, ensure_ascii=False, indent=2)
+    if needs_update:
+        with open(tools.ENTITIES_FILE, "w", encoding="utf-8") as f:
+            json.dump(existing, f, ensure_ascii=False, indent=2)
+        
+        # 异步更新知识图谱（不阻塞主流程）
+        try:
+            import threading
+            threading.Thread(target=refresh_graph, daemon=True).start()
+        except Exception as e:
+            tools.log(f"⚠️ 异步更新知识图谱失败: {e}")
 
 def update_abstract_map(extracted_list: List[Dict], source: str, published_at: Optional[str] = None):
     abstract_map = {}
@@ -262,6 +279,9 @@ def update_abstract_map(extracted_list: List[Dict], source: str, published_at: O
     
     now = datetime.now(timezone.utc).isoformat()
     base_ts = published_at or now
+    
+    # 检查是否需要更新
+    needs_update = False
     for item in extracted_list:
         key = item["abstract"]
         if key not in abstract_map:
@@ -271,21 +291,33 @@ def update_abstract_map(extracted_list: List[Dict], source: str, published_at: O
                 "sources": [source],
                 "first_seen": base_ts
             }
+            needs_update = True
         else:
             # first_seen 取最早的发布时间
             try:
                 old_ts = abstract_map[key].get("first_seen")
                 if old_ts and base_ts and base_ts < old_ts:
                     abstract_map[key]["first_seen"] = base_ts
+                    needs_update = True
             except Exception:
                 pass
 
             s_set = set(abstract_map[key]["sources"])
-            s_set.add(source)
-            abstract_map[key]["sources"] = sorted(s_set)
+            if source not in s_set:
+                s_set.add(source)
+                abstract_map[key]["sources"] = sorted(s_set)
+                needs_update = True
     
-    with open(tools.ABSTRACT_MAP_FILE, "w", encoding="utf-8") as f:
-        json.dump(abstract_map, f, ensure_ascii=False, indent=2)
+    if needs_update:
+        with open(tools.ABSTRACT_MAP_FILE, "w", encoding="utf-8") as f:
+            json.dump(abstract_map, f, ensure_ascii=False, indent=2)
+        
+        # 异步更新知识图谱（不阻塞主流程）
+        try:
+            import threading
+            threading.Thread(target=refresh_graph, daemon=True).start()
+        except Exception as e:
+            tools.log(f"⚠️ 异步更新知识图谱失败: {e}")
 
 # ======================
 # 主处理流程

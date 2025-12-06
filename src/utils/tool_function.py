@@ -9,31 +9,35 @@ import hashlib
 from pathlib import Path
 
 class tools:
+    # ======================
+    # 路径与配置（类变量，可通过类直接访问）
+    # ======================
+    
+    # 基础路径（类变量）
+    ROOT_DIR = Path(__file__).parent.parent.parent
+    DATA_DIR = ROOT_DIR / "data"
+    CONFIG_DIR = ROOT_DIR / "config"
+    RAW_NEWS_DIR = DATA_DIR / "raw_news"
+    DEDUPED_NEWS_DIR = DATA_DIR / "deduped_news"
+    LOG_FILE = DATA_DIR / "logs" / "agent1.log"
+    
+    # 数据文件（类变量）
+    ENTITIES_FILE = DATA_DIR / "entities.json"
+    EVENTS_FILE = DATA_DIR / "events.json"
+    ABSTRACT_MAP_FILE = DATA_DIR / "abstract_to_event_map.json"
+    PROCESSED_IDS_FILE = DATA_DIR / "processed_ids.txt"
+    STOP_WORDS_FILE = DATA_DIR / "stop_words.txt"
+    KNOWLEDGE_GRAPH_FILE = DATA_DIR / "knowledge_graph.json"
+    
+    # 配置常量（类变量）
+    DEDUPE_THRESHOLD = int(os.getenv("AGENT1_DEDUPE_THRESHOLD", "3"))
+    
     def __init__(self):
-
-        # ======================
-        # 路径与配置
-        # ======================
-
-        self.ROOT_DIR = Path(__file__).parent.parent.parent
-        self.DATA_DIR = self.ROOT_DIR / "data"
-        self.CONFIG_DIR = self.ROOT_DIR / "config"
-        self.RAW_NEWS_DIR = self.DATA_DIR / "raw_news"
-        self.DEDUPED_NEWS_DIR = self.DATA_DIR / "deduped_news"
-        self.LOG_FILE = self.DATA_DIR / "logs" / "agent1.log"
-
         # 确保目录存在
         for d in [self.DATA_DIR, self.RAW_NEWS_DIR, self.DEDUPED_NEWS_DIR, self.DATA_DIR / "logs"]:
             d.mkdir(parents=True, exist_ok=True)
 
-        # 数据文件
-        self.ENTITIES_FILE = self.DATA_DIR / "entities.json"
-        self.ABSTRACT_MAP_FILE = self.DATA_DIR / "abstract_to_event_map.json"
-        self.PROCESSED_IDS_FILE = self.DATA_DIR / "processed_ids.txt"
-        self.STOP_WORDS_FILE = self.DATA_DIR / "stop_words.txt"
-
-        # 加载环境变量
-        self.DEDUPE_THRESHOLD = int(os.getenv("AGENT1_DEDUPE_THRESHOLD", "3"))
+        # 实例变量
         stop_words = set()
         if self.STOP_WORDS_FILE.exists():
             with open(self.STOP_WORDS_FILE, "r", encoding="utf-8") as f:
