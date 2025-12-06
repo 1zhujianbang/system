@@ -67,22 +67,12 @@ class tools:
     
 
     def is_valid_entity(self, entity: str) -> bool:
+        '''
+            检查实体是否有效
+            暂时弃用
+        '''
         word = entity.strip()
-        if not word or len(word) < 2:
-            return False
         if word in self.STOP_WORDS:
-            return False
-        if word.isdigit() or re.match(r'^[0-9+\-\.%$€¥]+$', word):
-            return False
-        if not any(c.isalnum() for c in word):
-            return False
-        # 排除常见无效模式
-        if re.search(
-            r'(上涨|下跌|暴涨|暴跌|利好|利空|市场|投资者|用户|社区|'
-            r'协议|链|代币|币种|项目|平台|技术|系统|机制|概念|'
-            r'行情|趋势|信号|策略|模型|算法|框架|生态)$',
-            word
-        ):
             return False
         return True
 

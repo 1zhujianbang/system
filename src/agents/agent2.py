@@ -23,19 +23,23 @@ from dotenv import load_dotenv
 from ..utils.tool_function import tools
 from ..data.api_client import DataAPIPool
 from ..data.news_collector import NewsType
-from .agent1 import llm_extract_events, update_entities, update_abstract_map
+from .agent1 import llm_extract_events, update_entities, update_abstract_map, NewsDeduplicator
 
-# 初始化工具和数据API池
+# 初始化工具
 tools = tools()
+
+# 初始化数据API池 - 使用更新后的API池实现
 data_api_pool = DataAPIPool()
 
-async def expand_news_by_entities(entities: List[Dict], limit_per_entity: int = 10) -> List[Dict]:
+async def expand_news_by_entities(entities: List[Dict], limit_per_entity: int = 10, time_window_days: int = 30, full_search: bool = False) -> List[Dict]:
     """
     根据实体列表搜索相关新闻，支持使用原始词进行检索
     
     Args:
         entities: 实体列表，每个实体包含name和original_forms字段
         limit_per_entity: 每个实体搜索的新闻数量限制
+        time_window_days: 默认检索时间窗口（天），默认为30天
+        full_search: 是否进行全面检索，如果为True则从当前时间向前检索多个30天或更小的天数直到2020年
         
     Returns:
         搜索到的相关新闻列表
@@ -47,6 +51,7 @@ async def expand_news_by_entities(entities: List[Dict], limit_per_entity: int = 
     news_collectors = []
     available_sources = data_api_pool.list_available_sources()
     
+    # 与更新后的API池兼容，移除可能的备用逻辑
     for source_name in available_sources:
         try:
             collector = data_api_pool.get_collector(source_name)
@@ -63,52 +68,158 @@ async def expand_news_by_entities(entities: List[Dict], limit_per_entity: int = 
         entity_name = entity['name']
         original_forms = entity.get('original_forms', [])
         
-        # 构建搜索关键词列表：实体名称 + 所有原始词
-        search_terms = [entity_name] + original_forms
+        # 构建使用OR操作符连接的搜索查询：实体名称 + 所有原始词
+        all_terms = [entity_name] + original_forms
         
-        tools.log(f"🔍 为实体 '{entity_name}' 搜索相关新闻，包含 {len(original_forms)} 个原始词...")
+        # 生成查询批次以避免超过200字符限制
+        query_batches = []
+        current_batch = []
+        current_length = 0
         
-        for search_term in search_terms:
-            tools.log(f"   📝 使用关键词 '{search_term}' 进行搜索...")
+        for term in all_terms:
+            quoted_term = f'"{term}"'
+            term_length = len(quoted_term)
             
-            for collector in news_collectors:
-                try:
-                    # 使用搜索功能获取相关新闻
-                    if hasattr(collector, 'search_news_by_keyword'):
-                        news_list = await collector.search_news_by_keyword(
-                            keyword=search_term,
-                            limit=limit_per_entity
-                        )
+            # 如果是第一个词，直接添加；否则需要考虑OR操作符的长度
+            if current_batch:
+                required_length = current_length + 4 + term_length  # 4是" OR "的长度
+                if required_length > 200:
+                    # 如果添加当前词会超过限制，保存当前批次并开始新批次
+                    query_batches.append(" OR ".join(current_batch))
+                    current_batch = [quoted_term]
+                    current_length = term_length
+                else:
+                    current_batch.append(quoted_term)
+                    current_length = required_length
+            else:
+                current_batch.append(quoted_term)
+                current_length = term_length
+        
+        # 添加最后一个批次
+        if current_batch:
+            query_batches.append(" OR ".join(current_batch))
+        
+        tools.log(f"🔍 为实体 '{entity_name}' 搜索相关新闻，使用OR查询连接 {len(original_forms)} 个原始词...")
+        tools.log(f"   📝 生成了 {len(query_batches)} 个查询批次以避免超过200字符限制")
+        
+        # 获取时间范围
+        time_ranges = get_time_ranges(time_window_days, full_search)
+        
+        for collector in news_collectors:
+            try:
+                # 对每个查询批次和时间范围进行搜索
+                for time_range in time_ranges:
+                    start_date = time_range['start']
+                    end_date = time_range['end']
+                    
+                    tools.log(f"   📅 搜索时间范围: {start_date} 至 {end_date}")
+                    
+                    for batch_index, batch_query in enumerate(query_batches):
+                        tools.log(f"   📝 执行查询批次 {batch_index + 1}/{len(query_batches)}: '{batch_query}'")
                         
-                        # 为每条新闻添加实体标签并去重
-                        for news in news_list:
-                            # 生成唯一标识符用于去重
-                            news_id = f"{news.get('url', '')}_{news.get('publishedAt', '')}"
-                            if news_id not in news_id_set:
-                                news_id_set.add(news_id)
-                                news['expanded_from_entity'] = entity_name
-                                news['search_term'] = search_term  # 记录使用的搜索词
-                                news['source'] = collector.__class__.__name__.replace('NewsCollector', '').lower()
-                                expanded_news.append(news)
-                    elif hasattr(collector, 'search'):
-                        # 兼容不同的搜索方法名
-                        news_list = await collector.search(
-                            query=search_term,
-                            limit=limit_per_entity
-                        )
-                        
-                        for news in news_list:
-                            news_id = f"{news.get('url', '')}_{news.get('publishedAt', '')}"
-                            if news_id not in news_id_set:
-                                news_id_set.add(news_id)
-                                news['expanded_from_entity'] = entity_name
-                                news['search_term'] = search_term  # 记录使用的搜索词
-                                news['source'] = collector.__class__.__name__.replace('Collector', '').lower()
-                                expanded_news.append(news)
-                except Exception as e:
-                    tools.log(f"⚠️ 从 {collector.__class__.__name__} 使用关键词 '{search_term}' 搜索失败: {e}")
+                        try:
+                            # 使用搜索功能获取相关新闻，传入时间范围参数
+                            search_params = {
+                                'keyword' if hasattr(collector, 'search_news_by_keyword') else 'query': batch_query,
+                                'limit': limit_per_entity // (len(query_batches) * len(time_ranges)) + 1  # 平均分配限制
+                            }
+                            
+                            # 如果收集器支持时间范围参数，则添加
+                            if hasattr(collector, 'search_news_by_keyword'):
+                                if 'start_date' in collector.search_news_by_keyword.__code__.co_varnames:
+                                    search_params['start_date'] = start_date
+                                    search_params['end_date'] = end_date
+                                elif 'from_date' in collector.search_news_by_keyword.__code__.co_varnames:
+                                    search_params['from_date'] = start_date
+                                    search_params['to_date'] = end_date
+                            elif hasattr(collector, 'search'):
+                                if 'start_date' in collector.search.__code__.co_varnames:
+                                    search_params['start_date'] = start_date
+                                    search_params['end_date'] = end_date
+                                elif 'from_date' in collector.search.__code__.co_varnames:
+                                    search_params['from_date'] = start_date
+                                    search_params['to_date'] = end_date
+                            
+                            # 使用更新后的API调用方法
+                            # 优先使用search_news_by_keyword方法，确保与更新后的API池兼容
+                            if hasattr(collector, 'search_news_by_keyword'):
+                                news_list = await collector.search_news_by_keyword(**search_params)
+                            elif hasattr(collector, 'search'):
+                                news_list = await collector.search(**search_params)
+                            else:
+                                tools.log(f"⚠️ 收集器 {collector.__class__.__name__} 没有支持的搜索方法")
+                                continue
+                            
+                            # 为每条新闻添加实体标签并去重
+                            for news in news_list:
+                                # 生成唯一标识符用于去重
+                                news_id = f"{news.get('url', '')}_{news.get('publishedAt', '')}"
+                                if news_id not in news_id_set:
+                                    news_id_set.add(news_id)
+                                    news['expanded_from_entity'] = entity_name
+                                    news['search_term'] = batch_query  # 记录使用的搜索词
+                                    news['source'] = collector.__class__.__name__.replace('Collector', '').lower()
+                                    news['query_batch'] = batch_index + 1  # 记录查询批次
+                                    news['search_time_range'] = f"{start_date} to {end_date}"  # 记录搜索时间范围
+                                    expanded_news.append(news)
+                        except Exception as batch_error:
+                            tools.log(f"⚠️ 查询批次 {batch_index + 1} 执行失败: {batch_error}")
+            except Exception as e:
+                tools.log(f"⚠️ 从 {collector.__class__.__name__} 搜索失败: {e}")
     
     return expanded_news
+
+def get_time_ranges(default_days: int = 30, full_search: bool = False) -> List[Dict]:
+    """
+    获取搜索的时间范围列表，满足以下要求：
+    1. 时间范围只能从2020年至今
+    2. 默认检索前30天内的新闻
+    3. 全面检索时从当前时间向前检索多个30天或更小的天数直到2020年
+    
+    Args:
+        default_days: 默认的时间窗口天数，默认为30天
+        full_search: 是否进行全面检索
+        
+    Returns:
+        时间范围列表，每个元素包含start和end日期字符串
+    """
+    time_ranges = []
+    now = datetime.now(timezone.utc)
+    
+    # 定义2020年1月1日作为起始时间
+    start_date_2020 = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    
+    if not full_search:
+        # 非全面检索，只返回默认时间窗口
+        end_date = now
+        start_date = max(start_date_2020, now - timedelta(days=default_days))
+        time_ranges.append({
+            'start': start_date.strftime('%Y-%m-%d'),
+            'end': end_date.strftime('%Y-%m-%d')
+        })
+    else:
+        # 全面检索，从当前时间向前检索多个30天或更小的天数直到2020年
+        tools.log("🔄 执行全面检索，从当前时间向前检索多个30天批次直到2020年...")
+        
+        end_date = now
+        batch_count = 0
+        
+        while end_date > start_date_2020:
+            start_date = max(start_date_2020, end_date - timedelta(days=default_days))
+            
+            # 确保不重复添加相同的时间范围
+            if not time_ranges or time_ranges[-1]['start'] != start_date.strftime('%Y-%m-%d'):
+                time_ranges.append({
+                    'start': start_date.strftime('%Y-%m-%d'),
+                    'end': end_date.strftime('%Y-%m-%d')
+                })
+            
+            batch_count += 1
+            end_date = start_date - timedelta(days=1)  # 避免日期重叠
+            
+        tools.log(f"✅ 生成了 {batch_count} 个时间范围批次")
+    
+    return time_ranges
 
 def get_recent_entities(time_window_days: int = 30, limit: int = 50) -> List[Dict]:
     """
@@ -182,12 +293,15 @@ async def process_expanded_news(expanded_news: List[Dict]) -> int:
     """
     processed_count = 0
     
-    # 创建去重集合
+    # 初始化新闻去重器
+    deduplicator = NewsDeduplicator(threshold=tools.DEDUPE_THRESHOLD if hasattr(tools, 'DEDUPE_THRESHOLD') else 3)
+    
+    # 创建去重集合（ID去重）
     seen_news = set()
     
     for news in expanded_news:
         try:
-            # 检查新闻是否已处理
+            # 1. 检查新闻是否已处理（ID去重）
             news_id = news.get('id')
             source = news.get('source', 'unknown')
             if news_id:
@@ -200,6 +314,11 @@ async def process_expanded_news(expanded_news: List[Dict]) -> int:
             content = news.get('content', '')
             
             if not title:
+                continue
+                
+            # 2. 使用内容相似度去重（基于simhash）
+            news_text = f"{title} {content}".strip()
+            if deduplicator.is_duplicate(news_text):
                 continue
             
             # 提取实体和事件
@@ -234,15 +353,16 @@ async def main():
     tools.log("🚀 启动 Agent2：实体拓展新闻...")
     
     # 1. 获取最近的实体
-    recent_entities = get_recent_entities(time_window_days=30, limit=50)
+    recent_entities = get_recent_entities(time_window_days=30, limit=1)
     
     if not recent_entities:
         tools.log("📭 没有可用的实体进行新闻拓展")
         return
     
     # 2. 使用实体搜索相关新闻
+    # 默认只搜索最近30天的新闻，设置full_search=True可进行全面检索
     tools.log(f"🔍 开始搜索 {len(recent_entities)} 个实体的相关新闻...")
-    expanded_news = await expand_news_by_entities(recent_entities, limit_per_entity=5)
+    expanded_news = await expand_news_by_entities(recent_entities, limit_per_entity=120, time_window_days=30, full_search=False)
     tools.log(f"✅ 共搜索到 {len(expanded_news)} 条相关新闻")
     
     # 3. 处理搜索到的新闻

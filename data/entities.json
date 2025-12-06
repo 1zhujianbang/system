@@ -9,7 +9,7 @@
     ]
   },
   "美国": {
-    "first_seen": "2025-12-05T09:21:00+00:00",
+    "first_seen": "2025-11-17T10:05:56+00:00",
     "sources": [
       "rfi",
       "中国网新闻中心",
@@ -19,7 +19,8 @@
       "yahoo",
       "franceinfo",
       "les echos",
-      "euronews.com"
+      "euronews.com",
+      "gnews"
     ],
     "original_forms": [
       "美国",
@@ -355,18 +356,20 @@
     ]
   },
   "Santa Ragione": {
-    "first_seen": "2025-12-05T15:08:00+00:00",
+    "first_seen": "2025-11-25T20:31:53+00:00",
     "sources": [
-      "the guardian"
+      "the guardian",
+      "gnews"
     ],
     "original_forms": [
       "Santa Ragione"
     ]
   },
   "Steam": {
-    "first_seen": "2025-12-05T15:08:00+00:00",
+    "first_seen": "2025-11-25T20:31:53+00:00",
     "sources": [
-      "the guardian"
+      "the guardian",
+      "gnews"
     ],
     "original_forms": [
       "Steam"
@@ -592,12 +595,14 @@
     ]
   },
   "Crown Prosecution Service": {
-    "first_seen": "2025-12-05T14:58:01+00:00",
+    "first_seen": "2025-11-15T00:00:00+00:00",
     "sources": [
-      "bbc"
+      "bbc",
+      "gnews"
     ],
     "original_forms": [
-      "Crown Prosecution Service (CPS)"
+      "Crown Prosecution Service (CPS)",
+      "Crown Prosecution Service"
     ]
   },
   "伯明翰": {
@@ -751,6 +756,258 @@
     ],
     "original_forms": [
       "Somerset"
+    ]
+  },
+  "Epic Games": {
+    "first_seen": "2025-12-02T20:01:29+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Epic Games"
+    ]
+  },
+  "Epic Games Store": {
+    "first_seen": "2025-11-25T20:31:53+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Epic Games Store"
+    ]
+  },
+  "Humble Store": {
+    "first_seen": "2025-11-25T20:31:53+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Humble Store"
+    ]
+  },
+  "Humble": {
+    "first_seen": "2025-12-03T10:07:29+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Humble"
+    ]
+  },
+  "Valve": {
+    "first_seen": "2025-11-26T12:26:17+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Valve"
+    ]
+  },
+  "GOG": {
+    "first_seen": "2025-11-25T20:31:53+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "GOG"
+    ]
+  },
+  "Santa Ragio": {
+    "first_seen": "2025-11-28T17:09:12+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Santa Ragio"
+    ]
+  },
+  "Valve Corporation": {
+    "first_seen": "2025-11-28T17:09:12+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Valve Corporation"
+    ]
+  },
+  "意大利": {
+    "first_seen": "2025-11-26T12:26:17+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "意大利"
+    ]
+  },
+  "Pietro Righi Riva": {
+    "first_seen": "2025-11-25T20:31:53+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Pietro Righi Riva"
+    ]
+  },
+  "Itch": {
+    "first_seen": "2025-11-25T20:31:53+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Itch"
+    ]
+  },
+  "英国议会情报与安全委员会": {
+    "first_seen": "2025-12-03T07:57:44+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "英国议会情报与安全委员会"
+    ]
+  },
+  "白厅": {
+    "first_seen": "2025-12-03T07:57:44+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "白厅"
+    ]
+  },
+  "英国皇家检察署": {
+    "first_seen": "2025-11-08T14:30:57+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "英国皇家检察署"
+    ]
+  },
+  "Kevin Barry": {
+    "first_seen": "2025-11-19T23:42:55+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Kevin Barry"
+    ]
+  },
+  "Bar Standards Board": {
+    "first_seen": "2025-11-19T23:42:55+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Bar Standards Board"
+    ]
+  },
+  "Joseph James O’Connor": {
+    "first_seen": "2025-11-17T10:05:56+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Joseph James O’Connor"
+    ]
+  },
+  "金·卡戴珊": {
+    "first_seen": "2025-11-17T10:05:56+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "金·卡戴珊"
+    ]
+  },
+  "坎耶·韦斯特": {
+    "first_seen": "2025-11-17T10:05:56+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "坎耶·韦斯特"
+    ]
+  },
+  "Georgia Barter": {
+    "first_seen": "2025-11-17T00:00:00+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Georgia Barter"
+    ]
+  },
+  "Kay Barter": {
+    "first_seen": "2025-11-17T00:00:00+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Kay Barter"
+    ]
+  },
+  "爱德华·普特曼": {
+    "first_seen": "2025-11-15T15:00:00+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "爱德华·普特曼"
+    ]
+  },
+  "皇家检察署": {
+    "first_seen": "2025-11-15T15:00:00+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "皇家检察署"
+    ]
+  },
+  "Max Hill KC": {
+    "first_seen": "2025-11-15T00:00:00+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "Max Hill KC"
+    ]
+  },
+  "英国政府": {
+    "first_seen": "2025-11-15T00:00:00+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "英国政府"
+    ]
+  },
+  "卡罗琳·弗拉克": {
+    "first_seen": "2025-11-08T14:30:57+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "卡罗琳·弗拉克"
+    ]
+  },
+  "刘易斯·伯顿": {
+    "first_seen": "2025-11-08T14:30:57+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "刘易斯·伯顿"
+    ]
+  },
+  "David Morrison": {
+    "first_seen": "2025-11-07T00:01:00+00:00",
+    "sources": [
+      "gnews"
+    ],
+    "original_forms": [
+      "David Morrison"
     ]
   }
 }

@@ -513,17 +513,21 @@ class GNewsCollector:
         await self._ensure_session()
 
         url = f"{self.BASE_URL}{endpoint}"
-        params = dict(params or {})
-        params["apikey"] = self.api_key
+        # 创建参数副本，避免修改原始参数
+        request_params = dict(params or {})
+        
+        # 使用当前收集器的API key
+        request_params["apikey"] = self.api_key
 
         try:
             # 调试：打印本次请求的关键信息（不打印完整 key）
-            safe_params = {k: (v if k != "apikey" else "***") for k, v in params.items()}
+            safe_params = {k: (v if k != "apikey" else "***") for k, v in request_params.items()}
             print(f"[数据获取][GNews] 请求 {url} 参数: {safe_params}")
-            async with self.session.get(url, params=params) as response:
+            async with self.session.get(url, params=request_params) as response:
                 if response.status != 200:
                     text = await response.text()
                     raise Exception(f"GNews API 请求失败: {response.status} - {text}")
+                    
                 data = await response.json()
                 print(f"[数据获取][GNews] 响应状态: {response.status}, 文章数: {len(data.get('articles', []) if isinstance(data, dict) else [])}")
                 return data

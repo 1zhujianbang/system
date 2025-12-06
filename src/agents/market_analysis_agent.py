@@ -63,7 +63,7 @@ class MarketAnalysisAgent:
             # self._initialize_market_data()
 
             # 4. 新闻数据初始化
-            # await self._initialize_news_data()
+            await self._initialize_news_data()
 
             # 5. 实体数据初始化
             await self._initialize_entities_data()
