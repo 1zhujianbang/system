@@ -11,6 +11,9 @@ class UserConfig(BaseModel):
     api_key: str = Field(..., description="API密钥")
     api_secret: str = Field(..., description="API密钥密码")
     
+    # 风险偏好配置
+    risk_preference: str = Field(..., pattern="^(conservative|moderate|aggressive)$", description="分析风险偏好: conservative(保守), moderate(中性), aggressive(激进)")
+    
     # 市场数据配置
     symbols: List[str] = Field(..., min_length=1, description="要分析的市场符号列表")
     data_sources: Dict[str, Dict[str, Any]] = Field(default_factory=dict, description="数据源配置")
@@ -190,13 +193,13 @@ class AdvancedConfig(BaseModel):
 # 主配置类
 class MarketAnalysisConfig(BaseModel):
     user_config: UserConfig
-    model_config: ModelConfig
+    models_config: ModelConfig
     data_config: DataConfig
     monitoring_config: MonitoringConfig
     backup_config: BackupConfig
     advanced_config: AdvancedConfig
     market_risk_params: Optional[MarketRiskParams] = Field(default_factory=MarketRiskParams, description="市场分析风险参数")
-    config_version: str = Field(..., pattern="^[0-9]+\.[0-9]+\.[0-9]+$", description="配置版本格式必须为 x.x.x")
+    config_version: str = Field(..., pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$", description="配置版本格式必须为 x.x.x")
 
     @classmethod
     def from_yaml(cls, file_path: str = None) -> 'MarketAnalysisConfig':

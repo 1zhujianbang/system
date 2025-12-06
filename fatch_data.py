@@ -1,5 +1,5 @@
 from src.config.config_manager import UserConfig, DataConfig
-from src.data.data_collector import OKXMarketClient
+from src.data.data_collector import MarketClient
 from src.config.config_manager import MarketAnalysisConfig
 
 config = MarketAnalysisConfig.from_yaml("config/config.yaml")
@@ -7,7 +7,7 @@ user_config = config.user_config
 data_config = config.data_config
 
 # 创建客户端
-client = OKXMarketClient(user_config,data_config)
+client = MarketClient(user_config,data_config)
 
 # 批量导出
 results = client.batch_export_historical_data(

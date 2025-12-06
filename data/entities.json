@@ -1,1 +1,756 @@
-{}
+{
+  "中国自行车协会": {
+    "first_seen": "2025-12-05T12:46:28+00:00",
+    "sources": [
+      "东方财富"
+    ],
+    "original_forms": [
+      "中国自行车协会"
+    ]
+  },
+  "美国": {
+    "first_seen": "2025-12-05T09:21:00+00:00",
+    "sources": [
+      "rfi",
+      "中国网新闻中心",
+      "cbs news",
+      "playbill",
+      "the guardian",
+      "yahoo",
+      "franceinfo",
+      "les echos",
+      "euronews.com"
+    ],
+    "original_forms": [
+      "美国",
+      "America",
+      "U.S.",
+      "US",
+      "américain",
+      "Etats-Unis",
+      "United States"
+    ]
+  },
+  "美国总统": {
+    "first_seen": "2025-12-05T12:02:01+00:00",
+    "sources": [
+      "rfi"
+    ],
+    "original_forms": [
+      "美国总统特朗普"
+    ]
+  },
+  "特朗普": {
+    "first_seen": "2025-12-05T12:02:01+00:00",
+    "sources": [
+      "rfi"
+    ],
+    "original_forms": [
+      "特朗普"
+    ]
+  },
+  "白宫": {
+    "first_seen": "2025-12-05T12:02:01+00:00",
+    "sources": [
+      "rfi"
+    ],
+    "original_forms": [
+      "白宫"
+    ]
+  },
+  "法新社": {
+    "first_seen": "2025-12-05T12:02:01+00:00",
+    "sources": [
+      "rfi"
+    ],
+    "original_forms": [
+      "法新社"
+    ]
+  },
+  "欧洲": {
+    "first_seen": "2025-12-05T12:02:01+00:00",
+    "sources": [
+      "rfi",
+      "cbs news",
+      "the guardian",
+      "les echos",
+      "euronews.com"
+    ],
+    "original_forms": [
+      "欧洲",
+      "Europe",
+      "l'Europe"
+    ]
+  },
+  "俄罗斯": {
+    "first_seen": "2025-12-05T09:21:00+00:00",
+    "sources": [
+      "rfi",
+      "中国网新闻中心"
+    ],
+    "original_forms": [
+      "俄罗斯"
+    ]
+  },
+  "中国": {
+    "first_seen": "2025-12-05T07:23:00+00:00",
+    "sources": [
+      "rfi",
+      "dw",
+      "al jazeera chinese",
+      "it之家"
+    ],
+    "original_forms": [
+      "中国",
+      "中国内地"
+    ]
+  },
+  "拜登": {
+    "first_seen": "2025-12-05T12:02:01+00:00",
+    "sources": [
+      "rfi"
+    ],
+    "original_forms": [
+      "前总统拜登"
+    ]
+  },
+  "侵华日军南京大屠杀遇难同胞纪念馆": {
+    "first_seen": "2025-12-05T12:01:00+00:00",
+    "sources": [
+      "央视网"
+    ],
+    "original_forms": [
+      "侵华日军南京大屠杀遇难同胞纪念馆"
+    ]
+  },
+  "央视网": {
+    "first_seen": "2025-12-05T12:01:00+00:00",
+    "sources": [
+      "央视网"
+    ],
+    "original_forms": [
+      "央视网"
+    ]
+  },
+  "侵华日军国崎支队步兵第四十一联队": {
+    "first_seen": "2025-12-05T12:01:00+00:00",
+    "sources": [
+      "央视网"
+    ],
+    "original_forms": [
+      "侵华日军国崎支队步兵第四十一联队"
+    ]
+  },
+  "村田芳夫": {
+    "first_seen": "2025-12-05T12:01:00+00:00",
+    "sources": [
+      "央视网"
+    ],
+    "original_forms": [
+      "村田芳夫"
+    ]
+  },
+  "中华人民共和国": {
+    "first_seen": "2025-12-05T11:04:10+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "中国"
+    ]
+  },
+  "法兰西共和国": {
+    "first_seen": "2025-12-05T11:04:10+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "法国"
+    ]
+  },
+  "习近平": {
+    "first_seen": "2025-12-05T07:52:30+00:00",
+    "sources": [
+      "dw",
+      "al jazeera chinese"
+    ],
+    "original_forms": [
+      "习近平"
+    ]
+  },
+  "彭丽媛": {
+    "first_seen": "2025-12-05T11:04:10+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "彭丽媛"
+    ]
+  },
+  "埃马纽埃尔·马克龙": {
+    "first_seen": "2025-12-05T11:04:10+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "马克龙"
+    ]
+  },
+  "布丽吉特·马克龙": {
+    "first_seen": "2025-12-05T11:04:10+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "布丽吉特"
+    ]
+  },
+  "四川省": {
+    "first_seen": "2025-12-05T11:04:10+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "四川省"
+    ]
+  },
+  "成都市": {
+    "first_seen": "2025-12-05T11:04:10+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "成都"
+    ]
+  },
+  "都江堰": {
+    "first_seen": "2025-12-05T11:04:10+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "都江堰"
+    ]
+  },
+  "马克龙": {
+    "first_seen": "2025-12-05T07:52:30+00:00",
+    "sources": [
+      "dw",
+      "al jazeera chinese"
+    ],
+    "original_forms": [
+      "马克龙"
+    ]
+  },
+  "布丽吉特": {
+    "first_seen": "2025-12-05T11:18:26+00:00",
+    "sources": [
+      "dw"
+    ],
+    "original_forms": [
+      "布丽吉特"
+    ]
+  },
+  "法国": {
+    "first_seen": "2025-12-05T07:52:30+00:00",
+    "sources": [
+      "dw",
+      "al jazeera chinese",
+      "franceinfo"
+    ],
+    "original_forms": [
+      "法国",
+      "France"
+    ]
+  },
+  "普京": {
+    "first_seen": "2025-12-05T09:21:00+00:00",
+    "sources": [
+      "中国网新闻中心"
+    ],
+    "original_forms": [
+      "普京"
+    ]
+  },
+  "印度": {
+    "first_seen": "2025-12-05T09:21:00+00:00",
+    "sources": [
+      "中国网新闻中心"
+    ],
+    "original_forms": [
+      "印度"
+    ]
+  },
+  "新德里": {
+    "first_seen": "2025-12-05T09:21:00+00:00",
+    "sources": [
+      "中国网新闻中心"
+    ],
+    "original_forms": [
+      "新德里"
+    ]
+  },
+  "莫迪": {
+    "first_seen": "2025-12-05T09:21:00+00:00",
+    "sources": [
+      "中国网新闻中心"
+    ],
+    "original_forms": [
+      "莫迪"
+    ]
+  },
+  "成都": {
+    "first_seen": "2025-12-05T07:52:30+00:00",
+    "sources": [
+      "al jazeera chinese"
+    ],
+    "original_forms": [
+      "成都"
+    ]
+  },
+  "国家金融监督管理总局": {
+    "first_seen": "2025-12-05T07:28:00+00:00",
+    "sources": [
+      "thepaper.cn"
+    ],
+    "original_forms": [
+      "金融监管总局"
+    ]
+  },
+  "中国出口信用保险公司": {
+    "first_seen": "2025-12-05T07:28:00+00:00",
+    "sources": [
+      "thepaper.cn"
+    ],
+    "original_forms": [
+      "中国出口信用保险公司"
+    ]
+  },
+  "迪士尼": {
+    "first_seen": "2025-12-05T07:23:00+00:00",
+    "sources": [
+      "it之家"
+    ],
+    "original_forms": [
+      "迪士尼"
+    ]
+  },
+  "拜恩・霍华德": {
+    "first_seen": "2025-12-05T07:23:00+00:00",
+    "sources": [
+      "it之家"
+    ],
+    "original_forms": [
+      "拜恩・霍华德"
+    ]
+  },
+  "特朗普政府": {
+    "first_seen": "2025-12-05T14:13:19+00:00",
+    "sources": [
+      "cbs news",
+      "euronews.com"
+    ],
+    "original_forms": [
+      "Trump administration"
+    ]
+  },
+  "Santa Ragione": {
+    "first_seen": "2025-12-05T15:08:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "Santa Ragione"
+    ]
+  },
+  "Steam": {
+    "first_seen": "2025-12-05T15:08:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "Steam"
+    ]
+  },
+  "Jeremy O. Harris": {
+    "first_seen": "2025-12-05T14:53:00+00:00",
+    "sources": [
+      "playbill"
+    ],
+    "original_forms": [
+      "Jeremy O. Harris"
+    ]
+  },
+  "日本": {
+    "first_seen": "2025-12-05T14:53:00+00:00",
+    "sources": [
+      "playbill"
+    ],
+    "original_forms": [
+      "Japan"
+    ]
+  },
+  "路透社": {
+    "first_seen": "2025-12-05T14:53:00+00:00",
+    "sources": [
+      "playbill"
+    ],
+    "original_forms": [
+      "Reuters"
+    ]
+  },
+  "Donald Trump": {
+    "first_seen": "2025-12-05T14:37:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "Donald Trump"
+    ]
+  },
+  "欧盟": {
+    "first_seen": "2025-12-05T14:45:00+00:00",
+    "sources": [
+      "the guardian",
+      "franceinfo"
+    ],
+    "original_forms": [
+      "EU",
+      "l'Union européenne"
+    ]
+  },
+  "德克萨斯州": {
+    "first_seen": "2025-12-05T14:40:00+00:00",
+    "sources": [
+      "nbc news"
+    ],
+    "original_forms": [
+      "Texas"
+    ]
+  },
+  "希尔县": {
+    "first_seen": "2025-12-05T14:40:00+00:00",
+    "sources": [
+      "nbc news"
+    ],
+    "original_forms": [
+      "Texas Hill Country"
+    ]
+  },
+  "Ilhan Omar": {
+    "first_seen": "2025-12-05T14:37:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "Ilhan Omar"
+    ]
+  },
+  "Minnesota": {
+    "first_seen": "2025-12-05T14:37:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "Minnesota"
+    ]
+  },
+  "Somalia": {
+    "first_seen": "2025-12-05T14:37:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "Somalia"
+    ]
+  },
+  "United States": {
+    "first_seen": "2025-12-05T14:37:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "US"
+    ]
+  },
+  "Elon Musk": {
+    "first_seen": "2025-12-05T14:57:49+00:00",
+    "sources": [
+      "franceinfo"
+    ],
+    "original_forms": [
+      "Elon Musk"
+    ]
+  },
+  "法国海军陆战队步兵营": {
+    "first_seen": "2025-12-05T14:57:00+00:00",
+    "sources": [
+      "le parisien"
+    ],
+    "original_forms": [
+      "le bataillon de fusiliers marins"
+    ]
+  },
+  "朗格岛核潜艇基地": {
+    "first_seen": "2025-12-05T14:57:00+00:00",
+    "sources": [
+      "le parisien"
+    ],
+    "original_forms": [
+      "la base sous-marine de l’île Longue"
+    ]
+  },
+  "Lucas Chevalier": {
+    "first_seen": "2025-12-05T14:39:00+00:00",
+    "sources": [
+      "sports.fr"
+    ],
+    "original_forms": [
+      "Lucas Chevalier"
+    ]
+  },
+  "摩纳哥足球俱乐部": {
+    "first_seen": "2025-12-05T14:39:00+00:00",
+    "sources": [
+      "sports.fr"
+    ],
+    "original_forms": [
+      "Monaco"
+    ]
+  },
+  "Lamine Camara": {
+    "first_seen": "2025-12-05T14:39:00+00:00",
+    "sources": [
+      "sports.fr"
+    ],
+    "original_forms": [
+      "Lamine Camara"
+    ]
+  },
+  "巴黎圣日耳曼": {
+    "first_seen": "2025-12-05T14:39:00+00:00",
+    "sources": [
+      "sports.fr"
+    ],
+    "original_forms": [
+      "PSG"
+    ]
+  },
+  "J.D. Vance": {
+    "first_seen": "2025-12-05T14:36:41+00:00",
+    "sources": [
+      "les echos"
+    ],
+    "original_forms": [
+      "J.D. Vance"
+    ]
+  },
+  "让娜·多特塞尔": {
+    "first_seen": "2025-12-05T14:31:00+00:00",
+    "sources": [
+      "le parisien"
+    ],
+    "original_forms": [
+      "Jeanne d’Hauteserre"
+    ]
+  },
+  "巴黎第八区": {
+    "first_seen": "2025-12-05T14:31:00+00:00",
+    "sources": [
+      "le parisien"
+    ],
+    "original_forms": [
+      "VIIIe arrondissement de Paris"
+    ]
+  },
+  "法国电视台": {
+    "first_seen": "2025-12-05T14:18:48+00:00",
+    "sources": [
+      "franceinfo"
+    ],
+    "original_forms": [
+      "France Télévisions"
+    ]
+  },
+  "法国政府": {
+    "first_seen": "2025-12-05T14:13:00+00:00",
+    "sources": [
+      "les numériques"
+    ],
+    "original_forms": [
+      "le gouvernement"
+    ]
+  },
+  "Nathaniel Spencer": {
+    "first_seen": "2025-12-05T14:30:56+00:00",
+    "sources": [
+      "bbc",
+      "sky news"
+    ],
+    "original_forms": [
+      "Nathaniel Spencer"
+    ]
+  },
+  "Crown Prosecution Service": {
+    "first_seen": "2025-12-05T14:58:01+00:00",
+    "sources": [
+      "bbc"
+    ],
+    "original_forms": [
+      "Crown Prosecution Service (CPS)"
+    ]
+  },
+  "伯明翰": {
+    "first_seen": "2025-12-05T14:58:01+00:00",
+    "sources": [
+      "bbc"
+    ],
+    "original_forms": [
+      "Birmingham"
+    ]
+  },
+  "英国": {
+    "first_seen": "2025-12-05T14:58:01+00:00",
+    "sources": [
+      "bbc"
+    ],
+    "original_forms": [
+      "（上下文推断）"
+    ]
+  },
+  "Netflix": {
+    "first_seen": "2025-12-05T14:52:15+00:00",
+    "sources": [
+      "gamesindustry.biz"
+    ],
+    "original_forms": [
+      "Netflix"
+    ]
+  },
+  "华纳兄弟探索公司": {
+    "first_seen": "2025-12-05T14:52:15+00:00",
+    "sources": [
+      "gamesindustry.biz"
+    ],
+    "original_forms": [
+      "Warner Bros Discovery"
+    ]
+  },
+  "Greater Manchester Police": {
+    "first_seen": "2025-12-05T14:33:10+00:00",
+    "sources": [
+      "manchester evening news"
+    ],
+    "original_forms": [
+      "Police"
+    ]
+  },
+  "North West Ambulance Service": {
+    "first_seen": "2025-12-05T14:33:10+00:00",
+    "sources": [
+      "manchester evening news"
+    ],
+    "original_forms": [
+      "paramedics"
+    ]
+  },
+  "Greater Manchester Fire and Rescue Service": {
+    "first_seen": "2025-12-05T14:33:10+00:00",
+    "sources": [
+      "manchester evening news"
+    ],
+    "original_forms": [
+      "firefighters"
+    ]
+  },
+  "Salford Watersports Centre": {
+    "first_seen": "2025-12-05T14:33:10+00:00",
+    "sources": [
+      "manchester evening news"
+    ],
+    "original_forms": [
+      "Salford Watersports Centre"
+    ]
+  },
+  "英国健康安全局": {
+    "first_seen": "2025-12-05T14:27:09+00:00",
+    "sources": [
+      "lbc.co.uk"
+    ],
+    "original_forms": [
+      "UK Health Security Agency"
+    ]
+  },
+  "德国议会": {
+    "first_seen": "2025-12-05T14:26:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "German parliament"
+    ]
+  },
+  "德国": {
+    "first_seen": "2025-12-05T14:26:00+00:00",
+    "sources": [
+      "the guardian"
+    ],
+    "original_forms": [
+      "German"
+    ]
+  },
+  "林肯郡警方": {
+    "first_seen": "2025-12-05T14:25:00+00:00",
+    "sources": [
+      "lincolnshire live"
+    ],
+    "original_forms": [
+      "Lincolnshire police"
+    ]
+  },
+  "Trevor Blanchard": {
+    "first_seen": "2025-12-05T14:25:00+00:00",
+    "sources": [
+      "lincolnshire live"
+    ],
+    "original_forms": [
+      "Trevor Blanchard"
+    ]
+  },
+  "Poundland": {
+    "first_seen": "2025-12-05T14:08:46+00:00",
+    "sources": [
+      "bbc"
+    ],
+    "original_forms": [
+      "Poundland"
+    ]
+  },
+  "Gordon Brothers": {
+    "first_seen": "2025-12-05T14:08:46+00:00",
+    "sources": [
+      "bbc"
+    ],
+    "original_forms": [
+      "Gordon Brothers"
+    ]
+  },
+  "布里斯托尔": {
+    "first_seen": "2025-12-05T14:08:46+00:00",
+    "sources": [
+      "bbc"
+    ],
+    "original_forms": [
+      "Bristol"
+    ]
+  },
+  "萨默塞特": {
+    "first_seen": "2025-12-05T14:08:46+00:00",
+    "sources": [
+      "bbc"
+    ],
+    "original_forms": [
+      "Somerset"
+    ]
+  }
+}

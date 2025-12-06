@@ -41,29 +41,29 @@ class MarketAnalysisAgent:
         try: 
              # 1. 验证配置
             print("🔍 验证模型配置...")
-            if not hasattr(self.config, 'model_config'):
-                raise ValueError("配置中缺少 model_config 字段")
-            
-            if self.config.model_config is None:
-                raise ValueError("model_config 为 None")
-            
-            print(f"✅ 模型配置存在: {self.config.model_config.model_name}")
+            if not hasattr(self.config, 'models_config'):
+                raise ValueError("配置中缺少 models_config 字段")
+
+            if self.config.models_config is None:
+                raise ValueError("models_config 为 None")
+
+            print(f"✅ 模型配置存在: {self.config.models_config.model_name}")
 
             # 2. 加载模型
             print("🔍 初始化模型加载器...")
             model_loader = ModelLoader()
             print(f"🔍 模型目录: {model_loader.models_dir}")
-            print(f"🔍 模型名称: {self.config.model_config.model_name}")
+            print(f"🔍 模型名称: {self.config.models_config.model_name}")
             
             print("🔍 开始加载模型...")
-            self.model = model_loader.load_model(self.config.model_config)
-            print(f"✅ Model {self.config.model_config.model_name} loaded successfully.")
+            self.model = model_loader.load_model(self.config.models_config)
+            print(f"✅ Model {self.config.models_config.model_name} loaded successfully.")
 
             # 3. 市场数据初始化
             # self._initialize_market_data()
 
             # 4. 新闻数据初始化
-            await self._initialize_news_data()
+            # await self._initialize_news_data()
 
             # 5. 实体数据初始化
             await self._initialize_entities_data()
@@ -84,7 +84,7 @@ class MarketAnalysisAgent:
         return {
             "is_ready": self.is_ready,
             "risk_preference": self.config.user_config.risk_preference,
-            "model_used": self.config.model_config.model_name,
+            "model_used": self.config.models_config.model_name,
             "market_sentiment": self.market_sentiment.get('sentiment', 'neutral'),
             "news_count": len(structured_news),
             "entities_extracted": sum(len(ents) for ents in structured_news.get('entities', [])),
@@ -150,7 +150,7 @@ class MarketAnalysisAgent:
                 continue
                 
             # 检查数据量是否足够
-            min_data_points = self.config.model_config.data_window
+            min_data_points = self.config.models_config.data_window
             if len(data) < min_data_points:
                 print(f"⚠️  警告: {pair} 数据点不足 ({len(data)} < {min_data_points})")
             
@@ -172,7 +172,7 @@ class MarketAnalysisAgent:
                     self.technical_data[pair] = tech_calculator.calculate_all_indicators(data)
                     
                     # 验证技术指标计算
-                    required_features = self.config.model_config.features
+                    required_features = self.config.models_config.features
                     missing_features = tech_calculator.validate_features(
                         self.technical_data[pair], required_features
                     )

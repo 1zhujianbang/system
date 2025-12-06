@@ -3,6 +3,7 @@ from src.config.config_manager import MarketAnalysisConfig
 from src.agents.market_analysis_agent import MarketAnalysisAgent
 
 async def main():
+    agent = None
     try:
         # 方法1: 自动加载配置
         config = MarketAnalysisConfig.from_yaml()
