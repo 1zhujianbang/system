@@ -65,46 +65,54 @@
 
     System/
     ├── main.py                   # 主程序入口
-    ├── fatch_data.py             # 历史数据获取脚本
+    ├── app.py                    # Web 应用入口
     ├── .gitignore
     ├── LICENSE
     ├── README.md                 # 项目说明文档
     ├── config/                   # 配置文件目录
-    │   ├── .env                  # 环境变量配置
-    │   └── config.yaml           # 主配置文件
-    ├── data/                     # 数据文件目录
-    │   ├── deduped_news/         # 去重新闻数据目录
-    │   ├── logs/                 # 日志
-    │   ├── raw_news/             # 临时新闻数据目录
+    │   ├── .env.example          # 环境变量 (API Keys)
+    │   ├── config.yaml           # 主配置文件
+    │   └── pipelines/            # 预定义流水线配置
+    ├── data/                     # 数据存储目录
+    │   ├── config/               # 运行时配置
+    │   │   ├── entity_merge_rules.json # 实体合并规则库
+    │   │   └── templates/        # Pipeline 模板
+    │   ├── deduped_news/         # 已去重的新闻数据
+    │   ├── raw_news/             # 原始抓取数据
+    │   ├── logs/                 # 系统日志
     │   ├── entities.json         # 实体库
-    │   ├── processed_ids         # 新闻索引表
-    │   └── stop_words.txt        # 停用词列表
-    ├── models/                   # 模型文件目录
-    │   ├── data/                 # 训练数据目录
-    │   ├── pth/                  # 训练模型缓存目录
-    │   ├── explainable_model.py  # 可解释模型实现
-    │   ├── example.py            # 模型示例代码
-    │   └── explainable_market_model.pt  # 示例模型文件
+    │   ├── events.json           # 事件库
+    │   ├── knowledge_graph.json  # 知识图谱数据
+    │   └── stop_words.txt        # 停用词表
+    ├── pages/                    # Streamlit 页面
+    │   ├── 1_Dashboard.py        # 仪表盘
+    │   ├── 2_Pipeline_Builder.py # 任务构建器
+    │   ├── 3_Data_Inspector.py   # 数据查看器
+    │   └── 4_Knowledge_Graph.py  # 图谱可视化
     └── src/                      # 源代码目录
-        ├── __init__.py
         ├── agents/               # 智能体模块
-        │   ├── agent1.py         # 实体提取智能体
-        │   ├── agent2.py         # 新闻拓展智能体
-        │   ├── agent3.py         # 知识图谱构建智能体
-        │   ├── api_client.py     # api管理器
-        │   └── market_analysis_agent.py  # 市场分析智能体
-        ├── analysis/             # 分析模块
-        │   └── technical_calculator.py # 技术指标计算器
-        ├── config/               # 配置管理
-        │   └── config_manager.py # 配置管理器
-        ├── data/                 # 数据模块
-        │   ├── api_client.py     # api管理器
-        │   ├── data_collector.py # 市场数据收集器
-        │   └── news_collector.py # 新闻收集器
-        ├── models/               # 模型管理
-        │   └── model_loader.py   # 模型加载器
-        └── utils/                # 工具模块
-            └── validators.py     # 验证工具（当前为空）
+        │   ├── agent1.py         # 提取与去重智能体
+        │   ├── agent2.py         # 拓展搜索智能体
+        │   ├── agent3.py         # 图谱维护与合并智能体
+        │   └── api_client.py     # LLM API 客户端
+        ├── core/                 # 核心框架
+        │   ├── engine.py         # 任务执行引擎
+        │   ├── context.py        # 执行上下文管理
+        │   └── registry.py       # 工具注册中心
+        ├── data/                 # 数据层
+        │   ├── api_client.py     # 数据源 API 客户端
+        │   └── news_collector.py # 新闻采集器
+        ├── functions/            # 原子功能库 (Pipeline Tools)
+        │   ├── data_fetch.py     # 数据获取工具
+        │   ├── extraction.py     # 提取工具
+        │   ├── graph_ops.py      # 图谱操作工具
+        │   └── reporting.py      # 报告生成工具
+        ├── web/                  # Web 辅助模块
+        │   ├── config.py         # Web 配置
+        │   └── utils.py          # Web 通用工具
+        └── utils/                # 通用工具
+            ├── tool_function.py  # 基础工具集
+            └── entity_updater.py # 实体更新逻辑
 
 
 ## 市场分析智能体
@@ -132,6 +140,7 @@
 3. 运行主程序：
    ```bash
    python main.py
+   streamlit run app.py
    ```
 
 4. 智能体模块化程序：
