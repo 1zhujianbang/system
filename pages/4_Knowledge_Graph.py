@@ -40,7 +40,7 @@ with st.sidebar:
     st.divider()
     
     # 2. 显示设置
-    max_nodes = st.slider("Max Nodes", 10, 300, 50, help="Limit total nodes for better performance")
+    max_nodes = st.slider("Max Nodes", 10, 3000, 500, help="Limit total nodes for better performance")
     physics_enabled = st.checkbox("Enable Physics", value=True)
     
     st.divider()
