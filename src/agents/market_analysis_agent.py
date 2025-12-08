@@ -22,7 +22,7 @@ class MarketAnalysisAgent:
 
         # 初始化客户端
         self.market_client = MarketClient(config.user_config, config.data_config)
-        # 使用统一的 NewsCollector（内部通过 DATA_APIS 调用 Blockbeats、GNews 等多数据源）
+        # 使用统一的 NewsCollector（当前仅 GNews，多源需后续扩展）
         self.news_collector = NewsCollector()
 
         # 数据存储
@@ -210,8 +210,8 @@ class MarketAnalysisAgent:
         """初始化新闻数据：通过统一 NewsCollector + Agent1 处理多数据源新闻"""
         print("📰 初始化新闻数据（NewsCollector + Agent1）...")
         try:
-            # 1. 使用统一 NewsCollector 抓取多数据源新闻（Blockbeats、GNews 等），写入 raw_news 目录
-            print("🔍 调用 NewsCollector.data_extract 抓取新闻（支持多数据源）...")
+            # 1. 使用统一 NewsCollector 抓取新闻（当前仅 GNews），写入 raw_news 目录
+            print("🔍 调用 NewsCollector.data_extract 抓取新闻（当前仅 GNews）...")
             await self.news_collector.data_extract()
 
             # 2. 调用 agent1 主流程，从 raw_news / deduped_news 中读取并结构化处理

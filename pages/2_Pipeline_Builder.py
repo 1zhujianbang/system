@@ -8,10 +8,13 @@ from pathlib import Path
 from datetime import datetime
 import time
 import threading
+from datetime import timezone
+from dotenv import dotenv_values
 
 # 添加项目根目录到 path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR))
+ENV_PATH = ROOT_DIR / "config" / ".env.local"
 
 from src.core.registry import FunctionRegistry
 from src.core.engine import PipelineEngine
@@ -163,21 +166,28 @@ if "pipeline_steps" not in st.session_state:
 if "ingestion_apis" not in st.session_state:
     st.session_state.ingestion_apis = utils.get_default_api_sources_df()
 
-if "expansion_apis" not in st.session_state:
-    # 默认加载所有支持搜索的数据源 (目前 GNews 和 Blockbeats 都支持)
-    st.session_state.expansion_apis = utils.get_default_api_sources_df()
-
 if "expansion_tasks" not in st.session_state:
-    # 初始化 expansion_tasks (空)
+    # 初始化 expansion_tasks (空) —— 使用当前支持的字段
     st.session_state.expansion_tasks = pd.DataFrame(
-        columns=["enabled", "keyword", "depth", "batch_size", "delay"]
+        columns=["enabled", "keyword", "limit", "category", "from", "to", "sortby"]
     ).astype({
-        "enabled": "bool", 
-        "keyword": "str", 
-        "depth": "int", 
-        "batch_size": "int", 
-        "delay": "float"
+        "enabled": "bool",
+        "keyword": "str",
+        "limit": "int",
+        "category": "str",
+        "from": "str",
+        "to": "str",
+        "sortby": "str",
     })
+
+# 初始化 .env.local Key-Value
+def load_env_df():
+    kv = dotenv_values(ENV_PATH) if ENV_PATH.exists() else {}
+    rows = [{"key": k, "value": v or ""} for k, v in kv.items()]
+    return pd.DataFrame(rows, columns=["key", "value"])
+
+if "env_kv" not in st.session_state:
+    st.session_state.env_kv = load_env_df()
 
 # --- 辅助函数 ---
 
@@ -241,19 +251,12 @@ def render_input_field(step_idx, p_name, p_info, current_inputs, step):
             step["inputs"][p_name] = val
 
 # --- 场景化模块渲染 ---
-
-def render_ingestion_tab():
-    st.header("📥 Data Ingestion")
-    st.caption("Fetch news from sources (Feed/Search) and extract events.")
-    
-    # 使用 Tabs 将配置分为两部分：数据源 和 处理参数
-    tab_sources, tab_params, tab_run = st.tabs(["1. Data Sources", "2. Processing Options", "3. Review & Run"])
-    
-    # Tab 1: 数据源配置
-    with tab_sources:
-        st.subheader("Configure API Sources")
-        st.info("Manage your data sources here. You can enable/disable or edit specific endpoints.")
-        
+def render_configuration_tab():
+    st.header("📚 Configuration")
+    source_config, source_api_pool= st.tabs(["Source Configuration","Source API Pool"])
+    with source_config:
+        st.subheader("Source Configuration")
+        st.write("Source Configuration")
         edited_df = st.data_editor(
             st.session_state.ingestion_apis,
             num_rows="dynamic",
@@ -270,225 +273,397 @@ def render_ingestion_tab():
         )
         st.session_state.ingestion_apis = edited_df
         
-        # 实时显示选中的源数量
-        selected_count = len(edited_df[edited_df["enabled"] == True])
-        st.caption(f"✅ Selected Sources: {selected_count}")
+        # 实时显示选中的源数量，并保存当前选择
+        selected_apis = edited_df[edited_df["enabled"] == True]["name"].tolist()
+        st.session_state["ingestion_selected_apis"] = selected_apis
+        st.caption(f"✅ Selected Sources: {len(selected_apis)}")
 
-    # Tab 2: 处理参数配置
-    with tab_params:
-        st.subheader("Processing Parameters")
-        
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-             st.markdown("##### 📥 Fetch Settings")
-             news_limit = st.number_input("Max News Items (Total)", 10, 5000, 50, 10, help="Maximum number of news items to fetch in total.")
-             batch_size = st.number_input("Batch Size", 1, 50, 5, help="Number of concurrent requests.")
-             time_window = st.selectbox("Time Window", ["Last 24 Hours", "Last 3 Days", "Last 7 Days", "All Available"])
-             
-        with col_p2:
-             st.markdown("##### ⚙️ Pipeline Actions")
-             auto_update_kg = st.checkbox("Auto Update Knowledge Graph", True, help="Automatically extract entities and update the graph.")
-             enable_report = st.checkbox("Generate Summary Report", True, help="Create a markdown report after processing.")
+        # GNews 可选参数配置
+        gnews_params = st.session_state.get("gnews_params", {})
+        with st.expander("GNews 可选参数", expanded=False):
+            category = st.selectbox(
+                "Category",
+                ["", "general", "world", "business", "technology", "sports", "science", "health", "entertainment"],
+                index=0,
+                help="留空则不指定分类"
+            )
+            query = st.text_input("Query (关键词搜索，可空)")
+            col_from, col_to = st.columns(2)
+            min_date = datetime(2020, 1, 1).date()
+            max_date = datetime.now().date()
+            with col_from:
+                d_from = st.date_input("From 日期", value=None, min_value=min_date, max_value=max_date, key="gnews_from_date")
+                t_from = st.time_input("From 时间", value=None, key="gnews_from_time")
+            with col_to:
+                d_to = st.date_input("To 日期", value=None, min_value=min_date, max_value=max_date, key="gnews_to_date")
+                t_to = st.time_input("To 时间", value=None, key="gnews_to_time")
 
-    # Tab 3: 执行
-    with tab_run:
-        st.subheader("🚀 Ready to Start?")
-        
-        # 汇总配置
-        current_df = st.session_state.ingestion_apis
-        selected_sources = current_df[current_df["enabled"] == True]["name"].tolist()
-        
-        st.write("Summary:")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Sources Selected", len(selected_sources))
-        c2.metric("Max Items", news_limit)
-        c3.metric("Auto-Update KG", "Yes" if auto_update_kg else "No")
-        
-        if not selected_sources:
-            st.error("❌ No sources selected. Please go back to 'Data Sources' tab.")
-            btn_disabled = True
-        else:
-            btn_disabled = False
-            
-        if st.button("Start Ingestion Task", type="primary", disabled=btn_disabled, use_container_width=True):
-            pipeline_def = {
-                "name": "Data Ingestion Task",
-                "steps": [
-                    {
-                        "id": "fetch_news",
-                        "tool": "fetch_news_stream",
-                        "inputs": {
-                            "limit": news_limit, 
-                            "sources": selected_sources,
-                            "batch_size": batch_size,
-                            "time_window": time_window
-                        },
-                        "output": "raw_news_data"
-                    },
-                    {
-                        "id": "process_news",
-                        "tool": "batch_process_news",
-                        "inputs": {"news_list": "$raw_news_data"},
-                        "output": "extracted_events"
-                    }
-                ]
+            def combine(dt, tm):
+                if dt is None:
+                    return None
+                tm = tm or datetime.min.time()
+                # 统一使用 UTC 输出 ISO8601
+                return datetime.combine(dt, tm, tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+
+            from_iso = combine(d_from, t_from)
+            to_iso = combine(d_to, t_to)
+            nullable = st.text_input("Nullable", value=gnews_params.get("nullable", ""), help="如 description,content")
+            truncate = st.text_input("Truncate", value=gnews_params.get("truncate", ""), help="如 content")
+            sortby = st.selectbox("Sortby", ["", "publishedAt", "relevance"], index=0)
+            in_fields = st.text_input("In fields", value=gnews_params.get("in_fields", ""), help="如 title,description")
+            page = st.number_input("Page", min_value=1, value=gnews_params.get("page", 1), step=1)
+
+            # 保存到 session_state
+            st.session_state["gnews_params"] = {
+                "category": category or None,
+                "query": query or None,
+                "from_": from_iso,
+                "to": to_iso,
+                "nullable": nullable or None,
+                "truncate": truncate or None,
+                "sortby": sortby or None,
+                "in_fields": in_fields or None,
+                "page": int(page) if page else None,
             }
+
+    with source_api_pool:
+        st.subheader("Source API Pool")
+        st.caption("编辑并保存到 config/.env.local（覆盖写入，不保留注释/空行）。上方“保存该行/表格修改”仅更新内存，需在下方点击保存才写入文件。")
+        edited_env = st.session_state.env_kv
+        if st.checkbox("显示 Key/Value 表格编辑器", value=False, key="env_editor_toggle"):
+            edited_env = st.data_editor(
+                st.session_state.env_kv,
+                num_rows="dynamic",
+                use_container_width=True,
+                column_config={
+                    "key": st.column_config.TextColumn("Key", required=True),
+                    "value": st.column_config.TextColumn("Value", required=False, help="可输入占位符，注意避免泄露敏感值")
+                },
+                key="env_editor"
+            )
+            st.session_state.env_kv = edited_env
+        def try_parse_json(val: str):
+            if not isinstance(val, str):
+                return None, "非字符串"
+            txt = val.strip()
+            if not txt:
+                return None, "空值"
+            try:
+                obj = json.loads(txt)
+                return obj, ""
+            except Exception as e:
+                return None, str(e)
+
+        for _, row in edited_env.iterrows():
+            idx = row.name
+            k = str(row.get("key", "")).strip()
+            v = str(row.get("value", "")).strip()
+            if not k:
+                continue
+            parsed, err = try_parse_json(v)
+            with st.expander(f"{k}", expanded=False):
+                if parsed is not None:
+                    pretty_txt = json.dumps(parsed, ensure_ascii=False, indent=2)
+                    new_txt = st.text_area(
+                        "JSON 编辑（保存即写回 value）",
+                        value=pretty_txt,
+                        key=f"json_edit_{idx}",
+                        height=200
+                    )
+                    if st.button("保存该行", key=f"save_json_{idx}", use_container_width=True):
+                        try:
+                            parsed_new = json.loads(new_txt)
+                            # 写回表格缓存，保持紧凑存储
+                            edited_env.at[idx, "value"] = json.dumps(parsed_new, ensure_ascii=False)
+                            st.session_state.env_kv = edited_env
+                            st.success("已更新该行的 value")
+                        except Exception as e:
+                            st.error(f"JSON 解析失败: {e}")
+                    # 表格化展示（优先 list[dict] 或 dict -> DataFrame），否则用 json
+                    def to_table(obj):
+                        if isinstance(obj, list) and obj and all(isinstance(x, dict) for x in obj):
+                            return pd.DataFrame(obj), "list"
+                        if isinstance(obj, dict):
+                            return pd.DataFrame([obj]), "dict"
+                        return None, ""
+                    df_preview, kind = to_table(parsed)
+                    if df_preview is not None and not df_preview.empty:
+                        edited_df = st.data_editor(
+                            df_preview,
+                            num_rows="dynamic",
+                            use_container_width=True,
+                            key=f"env_table_{idx}"
+                        )
+                        if st.button("保存表格修改", key=f"save_table_{idx}", use_container_width=True):
+                            try:
+                                if kind == "list":
+                                    new_obj = edited_df.to_dict(orient="records")
+                                else:
+                                    new_obj = edited_df.to_dict(orient="records")[0] if not edited_df.empty else {}
+                                edited_env.at[idx, "value"] = json.dumps(new_obj, ensure_ascii=False)
+                                st.session_state.env_kv = edited_env
+                                st.success("已根据表格修改更新 value")
+                            except Exception as e:
+                                st.error(f"写回 JSON 失败: {e}")
+                    else:
+                        st.json(parsed)
+                else:
+                    st.warning(f"无法解析为 JSON：{err}")
+
+        if st.button("💾 保存到 .env.local", type="primary", use_container_width=True):
+            lines = []
+            for _, row in edited_env.iterrows():
+                k = str(row.get("key", "")).strip()
+                if not k:
+                    continue
+                v = str(row.get("value", "")).strip()
+                lines.append(f"{k}={v}")
+            ENV_PATH.parent.mkdir(parents=True, exist_ok=True)
+            ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            st.success(f"已写入 {ENV_PATH.name} ，共 {len(lines)} 条记录")
+
+
+
+def render_ingestion_tab():
+    st.header("📥 Data Ingestion")
+    st.caption("Fetch news from sources (Feed/Search) and extract events.")
+    
+    st.subheader("Processing Parameters")
+    
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+            st.markdown("##### 📥 Fetch Settings")
+            news_limit = st.number_input("Limit (per source)", 1, 10, 5, 1, help="Max news items to fetch per source.")
             
-            if auto_update_kg:
-                pipeline_def["steps"].append({
-                    "id": "update_kg",
-                    "tool": "update_graph_data",
-                    "inputs": {"events_list": "$extracted_events"},
-                    "output": "update_status"
-                })
-                
-            if enable_report:
-                pipeline_def["steps"].append({
-                    "id": "generate_report",
-                    "tool": "generate_markdown_report",
-                    "inputs": {"events_list": "$extracted_events", "title": f"Ingestion Report {datetime.now().strftime('%Y-%m-%d')}"},
-                    "output": "final_report_md"
-                })
-                
-            execute_pipeline(pipeline_def)
+    with col_p2:
+            st.markdown("##### ⚙️ Pipeline Actions")
+            auto_update_kg = st.checkbox("Auto Update Knowledge Graph", True, help="Automatically extract entities and update the graph.")
+            enable_report = st.checkbox("Generate Summary Report", True, help="Create a markdown report after processing.")
+
+    st.subheader("🚀 Ready to Start?")
+    
+    # 汇总配置
+    current_df = st.session_state.ingestion_apis
+    selected_sources = current_df[current_df["enabled"] == True]["name"].tolist()
+    
+    st.write("Summary:")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Sources Selected", len(selected_sources))
+    c2.metric("Max Items", news_limit)
+    c3.metric("Auto-Update KG", "Yes" if auto_update_kg else "No")
+    gnews_params = st.session_state.get("gnews_params", {})
+    
+    if not selected_sources:
+        st.error("❌ No sources selected. Please go back to 'Data Sources' tab.")
+        btn_disabled = True
+    else:
+        btn_disabled = False
+        
+    if st.button("Start Ingestion Task", type="primary", disabled=btn_disabled, use_container_width=True):
+        pipeline_def = {
+            "name": "Data Ingestion Task",
+            "steps": [
+                {
+                    "id": "fetch_news",
+                    "tool": "fetch_news_stream",
+                    "inputs": {
+                        "limit": news_limit, 
+                        "sources": selected_sources,
+                        # GNews 可选参数透传（仅当有值）
+                        **{k: v for k, v in gnews_params.items() if v}
+                    },
+                    "output": "raw_news_data"
+                },
+                {
+                    "id": "process_news",
+                    "tool": "batch_process_news",
+                    "inputs": {"news_list": "$raw_news_data"},
+                    "output": "extracted_events"
+                }
+            ]
+        }
+        
+        if auto_update_kg:
+            pipeline_def["steps"].append({
+                "id": "update_kg",
+                "tool": "update_graph_data",
+                "inputs": {"events_list": "$extracted_events"},
+                "output": "update_status"
+            })
+            
+        if enable_report:
+            pipeline_def["steps"].append({
+                "id": "generate_report",
+                "tool": "generate_markdown_report",
+                "inputs": {"events_list": "$extracted_events", "title": f"Ingestion Report {datetime.now().strftime('%Y-%m-%d')}"},
+                "output": "final_report_md"
+            })
+            
+        execute_pipeline(pipeline_def)
 
 def render_expansion_tab():
     st.header("🔍 Knowledge Expansion")
     st.caption("Search for news based on keywords to discover new entities.")
     
-    # 同样应用 Tabs 布局
-    tab_src, tab_kw, tab_exec = st.tabs(["1. Search APIs", "2. Keywords & Params", "3. Execution"])
+    st.subheader("Define Search Tasks")
+    st.info("Manage search keywords. You can add entities from the Knowledge Graph or manually type new keywords in the table.")
+    # 选择启用的搜索 API（与 Configuration 共用同一配置）
+    selected_apis = st.session_state.ingestion_apis[st.session_state.ingestion_apis["enabled"] == True]["name"].tolist()
     
-    with tab_src:
-        st.subheader("Configure Search APIs")
-        edited_apis = st.data_editor(
-            st.session_state.expansion_apis,
-            num_rows="dynamic",
-            use_container_width=True,
-            column_config={
-                "enabled": st.column_config.CheckboxColumn("Enabled"),
-                "name": st.column_config.TextColumn("Source Name", required=True),
-                "type": st.column_config.SelectboxColumn("API Type", options=["gnews"], required=True),
-                "language": st.column_config.SelectboxColumn("Language", options=["ar", "zh", "nl", "en", "fr", "de", "el", "he", "hi", "id", "it", "ja", "ml", "mr", "no", "pt", "pa", "ro", "ru", "es", "sv", "ta", "te", "tr", "uk"]),
-                "timeout": st.column_config.NumberColumn("Timeout (s)"),
-            },
-            key="expansion_editor_main"
-        )
-        st.session_state.expansion_apis = edited_apis
-        selected_apis = edited_apis[edited_apis["enabled"] == True]["name"].tolist()
-
-    with tab_kw:
-        st.subheader("Define Search Tasks")
-        st.info("Manage search keywords. You can add entities from the Knowledge Graph or manually type new keywords in the table.")
+    # 工具栏：从下拉列表添加
+    entities = utils.load_entities()
+    if entities:
+        all_entity_names = sorted(list(entities.keys()))
         
-        # 工具栏：从下拉列表添加
-        entities = utils.load_entities()
-        if entities:
-            all_entity_names = sorted(list(entities.keys()))
-            
-            c_add_sel, c_add_btn = st.columns([3, 1])
-            with c_add_sel:
-                selected_entities = st.multiselect(
-                    "Select Entities from Graph", 
-                    options=all_entity_names,
-                    placeholder="Choose entities to add..."
-                )
-            with c_add_btn:
-                st.write("") # Spacer
-                st.write("") 
-                if st.button("➕ Add Selected", use_container_width=True):
-                    if selected_entities:
-                        new_rows = []
-                        # 获取现有关键词以避免重复
-                        existing_kws = set()
-                        if not st.session_state.expansion_tasks.empty:
-                            existing_kws = set(st.session_state.expansion_tasks["keyword"].tolist())
-                            
-                        count = 0
-                        for ent in selected_entities:
-                            if ent not in existing_kws:
-                                new_rows.append({
-                                    "enabled": True,
-                                    "keyword": ent,
-                                    "depth": 1,
-                                    "batch_size": 5,
-                                    "delay": 1.0
-                                })
-                                count += 1
+        c_add_sel, c_add_btn = st.columns([3, 1])
+        with c_add_sel:
+            selected_entities = st.multiselect(
+                "Select Entities from Graph", 
+                options=all_entity_names,
+                placeholder="Choose entities to add..."
+            )
+        with c_add_btn:
+            st.write("") # Spacer
+            st.write("") 
+            if st.button("➕ Add Selected", use_container_width=True):
+                if selected_entities:
+                    new_rows = []
+                    # 获取现有关键词以避免重复
+                    existing_kws = set()
+                    if not st.session_state.expansion_tasks.empty:
+                        existing_kws = set(st.session_state.expansion_tasks["keyword"].tolist())
                         
-                        if new_rows:
-                            new_df = pd.DataFrame(new_rows)
-                            st.session_state.expansion_tasks = pd.concat(
-                                [st.session_state.expansion_tasks, new_df], 
-                                ignore_index=True
-                            )
-                            st.success(f"Added {count} new tasks!")
-                            st.rerun()
-                        else:
-                            st.warning("Selected entities are already in the list.")
+                    count = 0
+                    for ent in selected_entities:
+                        if ent not in existing_kws:
+                            new_rows.append({
+                                "enabled": True,
+                                "keyword": ent,
+                                "limit": 5,
+                                "category": "general",
+                                "from": "",
+                                "to": "",
+                                "sortby": ""
+                            })
+                            count += 1
+                    
+                    if new_rows:
+                        new_df = pd.DataFrame(new_rows)
+                        st.session_state.expansion_tasks = pd.concat(
+                            [st.session_state.expansion_tasks, new_df], 
+                            ignore_index=True
+                        )
+                        st.success(f"Added {count} new tasks!")
+                        st.rerun()
                     else:
-                        st.warning("Please select entities first.")
+                        st.warning("Selected entities are already in the list.")
+                else:
+                    st.warning("Please select entities first.")
 
-        # 任务表格编辑器
-        edited_tasks = st.data_editor(
-            st.session_state.expansion_tasks,
-            num_rows="dynamic",
-            use_container_width=True,
-            column_config={
-                "enabled": st.column_config.CheckboxColumn("Enabled"),
-                "keyword": st.column_config.TextColumn("Keyword", required=True, help="Type manually or added from dropdown"),
-                "depth": st.column_config.NumberColumn("Depth", min_value=1, max_value=3),
-                "batch_size": st.column_config.NumberColumn("Batch Size", min_value=1, max_value=50),
-                "delay": st.column_config.NumberColumn("Delay (s)", min_value=0.0, max_value=10.0, format="%.1f"),
-            },
-            key="expansion_tasks_editor"
-        )
-        st.session_state.expansion_tasks = edited_tasks
+    # 任务表格编辑器
+    edited_tasks = st.data_editor(
+        st.session_state.expansion_tasks,
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={
+            "enabled": st.column_config.CheckboxColumn("Enabled"),
+            "keyword": st.column_config.TextColumn("Keyword", required=True, help="Type manually or added from dropdown"),
+            "limit": st.column_config.NumberColumn("Limit", min_value=1, max_value=10, default=5),
+            "category": st.column_config.TextColumn("Category", help="GNews category，如 general/business/...，可空"),
+            "from": st.column_config.TextColumn("From (ISO8601)", help="可空，如 2025-12-01T00:00:00Z"),
+            "to": st.column_config.TextColumn("To (ISO8601)", help="可空，如 2025-12-31T23:59:59Z"),
+            "sortby": st.column_config.SelectboxColumn("Sortby", options=["", "publishedAt", "relevance"]),
+        },
+        key="expansion_tasks_editor"
+    )
+    st.session_state.expansion_tasks = edited_tasks
 
-    with tab_exec:
-        st.subheader("🚀 Run Expansion")
-        
-        # 过滤出启用的任务
-        active_tasks = st.session_state.expansion_tasks[st.session_state.expansion_tasks["enabled"] == True]
-        
-        st.write(f"Selected APIs: **{len(selected_apis)}**")
-        st.write(f"Active Tasks: **{len(active_tasks)}**")
-        
-        if st.button("Start Expansion Task", type="primary", use_container_width=True):
-            if not selected_apis:
-                st.error("Please select at least one Search API.")
-                return
-            if active_tasks.empty:
-                st.error("Please define and enable at least one Search Task.")
-                return
-                
-            # 构建 Pipeline：为每个启用任务生成一个步骤
-            pipeline_steps = []
-            for idx, row in active_tasks.iterrows():
-                kw = row["keyword"]
-                step_id = f"search_{kw.replace(' ', '_')}_{idx}"
-                
-                pipeline_steps.append({
-                     "id": step_id,
-                     "tool": "search_news_by_keywords", 
-                     "inputs": {
-                         "keywords": [kw], # 工具期望列表
-                         "apis": selected_apis,
-                         "depth": int(row["depth"]),
-                         "batch_size": int(row["batch_size"]),
-                         "delay": float(row["delay"])
-                     },
-                     "output": f"results_{idx}"
-                })
+    st.subheader("🚀 Run Expansion")
+    
+    # 过滤出启用的任务
+    active_tasks = st.session_state.expansion_tasks[st.session_state.expansion_tasks["enabled"] == True]
+    
+    c1, c2 = st.columns(2)
+    c1.metric("Selected APIs", len(selected_apis))
+    c2.metric("Active Tasks", len(active_tasks))
+    
+    if st.button("Start Expansion Task", type="primary", use_container_width=True):
+        if not selected_apis:
+            st.error("Please select at least one Search API.")
+            return
+        if active_tasks.empty:
+            st.error("Please define and enable at least one Search Task.")
+            return
             
-            pipeline_def = {
-                "name": "Knowledge Expansion Batch",
-                "steps": pipeline_steps
-            }
-            execute_pipeline(pipeline_def)
+        # 构建 Pipeline：为每个启用任务生成一个步骤
+        pipeline_steps = []
+        for idx, row in active_tasks.iterrows():
+            kw = row["keyword"]
+            step_id = f"search_{kw.replace(' ', '_')}_{idx}"
+            
+            pipeline_steps.append({
+                    "id": step_id,
+                    "tool": "search_news_by_keywords", 
+                    "inputs": {
+                        "keywords": [kw], # 工具期望列表
+                        "apis": selected_apis,
+                        "limit": int(row.get("limit", 50)),
+                        "category": row.get("category") or None,
+                        "from": row.get("from") or None,
+                        "to": row.get("to") or None,
+                        "sortby": row.get("sortby") or None
+                    },
+                    "output": f"results_{idx}"
+            })
+        
+        pipeline_def = {
+            "name": "Knowledge Expansion Batch",
+            "steps": pipeline_steps
+        }
+        execute_pipeline(pipeline_def)
 
 def render_maintenance_tab():
     st.header("🕸️ Graph Maintenance")
+    
+    # 当前临时数据快照（实体/事件）
+    data_dir = ROOT_DIR / "data"
+    entities_tmp_file = data_dir / "tmp" / "entities_tmp.json"
+    events_tmp_file = data_dir / "tmp" / "abstract_to_event_map_tmp.json"
+
+    def load_json(path):
+        try:
+            if path.exists():
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception as e:
+            st.warning(f"{path.name} 读取失败: {e}")
+        return {}
+
+    entities_tmp = load_json(entities_tmp_file)
+    events_tmp = load_json(events_tmp_file)
+
+    c1, c2 = st.columns(2)
+    c1.metric("临时实体", len(entities_tmp))
+    c2.metric("临时事件", len(events_tmp))
+
+    with st.expander("查看临时实体 / 事件示例", expanded=False):
+        if entities_tmp:
+            df_ent = pd.DataFrame(
+                [{"name": k, "first_seen": v.get("first_seen", ""), "sources": ",".join(v.get("sources", []))[:80]} for k, v in list(entities_tmp.items())[:50]]
+            )
+            st.write("临时实体（最多50条预览）")
+            st.dataframe(df_ent, use_container_width=True)
+        else:
+            st.info("暂无临时实体数据")
+
+        if events_tmp:
+            df_evt = pd.DataFrame(
+                [{"abstract": k, "first_seen": v.get("first_seen", ""), "entities": ",".join(v.get("entities", []))[:80]} for k, v in list(events_tmp.items())[:50]]
+            )
+            st.write("临时事件（最多50条预览）")
+            st.dataframe(df_evt, use_container_width=True)
+        else:
+            st.info("暂无临时事件数据")
     
     with st.form("maintenance_form"):
         c1, c2 = st.columns(2)
@@ -505,7 +680,15 @@ def render_maintenance_tab():
     if submitted:
         pipeline_def = {
             "name": "Graph Maintenance",
-            "steps": [{"id": "maint_op", "tool": "update_graph_data", "inputs": {"events_list": []}, "output": "status"}]
+            # 调用 Agent3 刷新压缩知识图谱（基于现有实体/事件文件）
+            "steps": [
+                {
+                    "id": "refresh_kg",
+                    "tool": "refresh_knowledge_graph",
+                    "inputs": {},
+                    "output": "status"
+                }
+            ]
         }
         execute_pipeline(pipeline_def)
 
@@ -562,9 +745,10 @@ def render_custom_builder():
             execute_pipeline(pipeline_def)
 
 # --- 主导航 ---
-tabs = st.tabs(["📥 Ingestion", "🔍 Expansion", "🕸️ Maintenance", "🛠️ Custom Builder"])
+tabs = st.tabs(["Configuration","Ingestion", "Expansion", "Maintenance", "Custom Builder"])
 
-with tabs[0]: render_ingestion_tab()
-with tabs[1]: render_expansion_tab()
-with tabs[2]: render_maintenance_tab()
-with tabs[3]: render_custom_builder()
+with tabs[0]: render_configuration_tab()
+with tabs[1]: render_ingestion_tab()
+with tabs[2]: render_expansion_tab()
+with tabs[3]: render_maintenance_tab()
+with tabs[4]: render_custom_builder()

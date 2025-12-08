@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Any, List, Dict
 
 from dotenv import load_dotenv
-from .news_collector import BlockbeatsNewsCollector, GNewsCollector, Language
+from .news_collector import GNewsCollector
 
 def get_apis_config(config_path: Path = None) -> List[dict]:
     """
@@ -113,16 +113,9 @@ class DataAPIPool:
         
         source_type = config.get("type", "").lower()
         if not source_type:
-            # 兼容旧配置：根据名字猜测
-            if "blockbeats" in name.lower(): source_type = "blockbeats"
-            elif "gnews" in name.lower(): source_type = "gnews"
+            if "gnews" in name.lower(): source_type = "gnews"
 
-        if source_type == "blockbeats":
-            collector = BlockbeatsNewsCollector(
-                language=Language.CN,  # 可从配置读取
-                timeout=config.get("timeout", 30),
-            )
-        elif source_type == "gnews":
+        if source_type == "gnews":
             api_key = config.get("api_key") or os.getenv("GNEWS_API_KEY", "")
             if not api_key:
                 raise ValueError("GNews 数据源需要配置 api_key 或环境变量 GNEWS_API_KEY")

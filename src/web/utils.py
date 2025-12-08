@@ -9,6 +9,9 @@ from src.data.api_client import get_apis_config
 TEMPLATES_DIR = DATA_DIR / "config" / "templates"
 TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 
+# 临时原始新闻目录（Agent1 处理入口）
+RAW_NEWS_TMP_DIR = DATA_DIR / "tmp" / "raw_news"
+
 @st.cache_data(ttl=60)
 def load_entities():
     """
@@ -41,10 +44,14 @@ def load_events():
 def get_raw_news_files():
     """
     获取原始新闻文件列表，缓存 300 秒 (5分钟)
+    合并 tmp/raw_news 与 raw_news，并按修改时间倒序。
     """
-    if RAW_NEWS_DIR.exists():
-        return list(RAW_NEWS_DIR.glob("*.jsonl"))
-    return []
+    files = []
+    for path in (RAW_NEWS_TMP_DIR, RAW_NEWS_DIR):
+        if path.exists():
+            files.extend(path.glob("*.jsonl"))
+    uniq = {f.resolve(): f for f in files}.values()
+    return sorted(uniq, key=lambda x: x.stat().st_mtime, reverse=True)
 
 @st.cache_data(ttl=60)
 def load_raw_news_file(file_path: Path):
@@ -93,7 +100,17 @@ def get_default_api_sources_df():
     if not data:
          data = [
             {"name": "GNews-cn", "language": "zh", "country": "cn", "timeout": 30, "enabled": True, "type": "gnews"},
-            {"name": "Blockbeats", "type": "blockbeats", "enabled": True, "timeout": 30}
+            {"name": "GNews-us", "language": "en", "country": "us", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-fr", "language": "fr", "country": "fr", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-gb", "language": "en", "country": "gb", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-hk", "language": "zh", "country": "hk", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-ru", "language": "ru", "country": "ru", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-ua", "language": "uk", "country": "ua", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-tw", "language": "zh", "country": "tw", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-sg", "language": "en", "country": "sg", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-jp", "language": "ja", "country": "jp", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-br", "language": "pt", "country": "br", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-ar", "language": "es", "country": "ar", "timeout": 30, "enabled": True, "type": "gnews"}
         ]
         
     return pd.DataFrame(data)

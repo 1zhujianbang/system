@@ -21,9 +21,6 @@ user_config:
   
   # 分析风险偏好: conservative(保守), moderate(中性), aggressive(激进)
   risk_preference: "moderate"
-  
-  # 是否启用自动更新实体功能
-  auto_update_entities: true  # 默认开启，自动更新实体数据
 
 # 模型配置
 models_config:
@@ -41,9 +38,6 @@ models_config:
   
   # 预测范围（Pydantic必需字段）
   prediction_horizon: 24
-  
-  # 分析目标: "trend", "volatility", "correlation", "sentiment"
-  analysis_target: "trend"
   
   # 特征列表
   features:
@@ -82,20 +76,6 @@ models_config:
     learning_rate: 0.001
     dropout_rate: 0.2
 
-# 市场分析风险参数
-market_risk_params:
-  # 波动率分析配置
-  volatility:
-    enabled: true
-    period: 20
-    threshold: 0.02
-  
-  # 相关性分析配置
-  correlation:
-    enabled: true
-    lookback_period: 30
-    min_correlation: 0.7
-
 # 数据配置
 data_config:
   # 数据源（符合Pydantic验证要求）
@@ -112,219 +92,7 @@ data_config:
   
   # 数据更新间隔（秒）
   update_interval: 60
-  
-  # 多源数据配置
-  multi_source:
-    # 市场数据API
-    market_apis:
-      - "yfinance"
-      - "alphavantage"
-      - "bloomberg"
-    
-    # 新闻数据API
-    news_apis:
-      - "gnews"
-      - "bloomberg_news"
-      - "reuters"
-  
-  # 特征工程配置
-  feature_engineering:
-    # 技术指标
-    technical_indicators:
-      rsi:
-        period: 14
-        enabled: true
-      macd:
-        fast_period: 12
-        slow_period: 26
-        signal_period: 9
-        enabled: true
-      bollinger_bands:
-        period: 20
-        std_dev: 2
-        enabled: true
-      atr:
-        period: 14
-        enabled: true
-    
-    # 数据标准化
-    normalization:
-      method: "zscore"  # "minmax", "zscore", "robust"
-      enabled: true
 
-# 交易策略配置
-strategy_config:
-  # 策略名称
-  strategy_name: "ai_hybrid_strategy"
-  
-  # 信号生成
-  signal_generation:
-    # 置信度阈值
-    confidence_threshold: 0.65
-    
-    # 最小信号强度
-    min_signal_strength: 0.1
-    
-    # 信号确认周期
-    confirmation_period: 2
-  
-  # 入场条件
-  entry_conditions:
-    # 启用AI信号
-    ai_signal_enabled: true
-    
-    # 技术指标确认
-    technical_confirmation: true
-    
-    # 市场状态过滤
-    market_regime_filter: true
-    
-    # 波动率过滤
-    volatility_filter:
-      enabled: true
-      max_volatility: 0.10
-  
-  # 分析输出配置
-  analysis_output:
-    # 生成分析报告
-    generate_reports: true
-    
-    # 报告格式
-    report_formats:
-      - "pdf"
-      - "html"
-      - "json"
-    
-    # 报告输出路径
-    report_path: "./reports"
-    
-    # 报告生成间隔（小时）
-    report_interval: 24
-
-# 监控与日志配置
-monitoring_config:
-  # 日志配置
-  logging:
-    # 日志级别: "DEBUG", "INFO", "WARNING", "ERROR"
-    level: "INFO"
-    
-    # 日志文件路径
-    file_path: "./logs/market_analysis.log"
-    
-    # 是否输出到控制台
-    console_output: true
-  
-  # 性能监控
-  performance:
-    # 启用实时监控
-    enabled: true
-    
-    # 监控指标
-    metrics:
-      # 分析速度
-      - "analysis_speed"
-      # 模型准确率
-      - "model_accuracy"
-      # 数据更新延迟
-      - "data_update_latency"
-      # 分析覆盖度
-      - "analysis_coverage"
-    
-    # 报告生成间隔（小时）
-    report_interval: 24
-  
-  # 告警配置
-  alerts:
-    # 邮箱告警
-    email_alerts:
-      enabled: false
-      smtp_server: "smtp.gmail.com"
-      smtp_port: 587
-      sender_email: ""
-      sender_password: ""
-      receiver_emails: []
-    
-    # 流平台告警
-    wechat_alerts:
-      enabled: false
-      bot_token: ""
-      chat_id: ""
-    
-    # 告警条件
-    alert_conditions:
-      # 市场异常波动
-      - "market_volatility_spike"
-      # 系统错误
-      - "system_error"
-      # 数据连接断开
-      - "data_connection_lost"
-      # 异常交易量
-      - "unusual_volume"
-      # 新闻影响事件
-      - "significant_news_event"
-
-# 备份与恢复配置
-backup_config:
-  # 自动备份
-  auto_backup:
-    enabled: true
-    interval_hours: 24
-    keep_backups: 7
-  
-  # 备份内容
-  backup_items:
-    - "config"
-    - "analysis_results"
-    - "knowledge_graph"
-    - "model_performance"
-    - "market_data"
-  
-  # 备份路径
-  backup_path: "./backups"
-
-# 高级配置
-advanced_config:
-  # 并行处理
-  parallel_processing:
-    enabled: true
-    max_workers: 4
-  
-  # 内存管理
-  memory_management:
-    max_memory_usage: "2G"
-    clear_cache_hours: 1
-  
-  # 调试模式
-  debug_mode: false
-  
-  # 随机种子（用于可重复性）
-  random_seed: 996
-
-# agent3 压缩与分桶配置
-agent3_config:
-  # 实体分批大小
-  entity_batch_size: 80
-  # 实体预聚类最大数量与阈值（超出则跳过预聚类）
-  entity_precluster_limit: 500
-  entity_precluster_similarity: 0.93
-
-  # 事件批量与分桶
-  event_batch_size: 15
-  event_bucket_days: 7
-  event_bucket_entity_overlap: 1
-  event_bucket_max_size: 40
-
-  # 事件预聚类控制
-  event_precluster_limit: 300
-  event_precluster_similarity: 0.82
-
-  # prompt截断，防止过长
-  max_summary_chars: 360
-
-  # 并发与速率控制
-  entity_max_workers: 6
-  event_max_workers: 6
-  rate_limit_per_sec: 6
 
 # =============================================
 # 配置版本（勿修改）

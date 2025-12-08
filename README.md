@@ -10,10 +10,7 @@
 
 ### 当前计划
 
-- 现在的项目一堆问题，不过仍可控
-- 前端问题
-- agent3过量输入：本地库实体规则（实现） + 事件按时间和实体分批 的预处理 以及 分批输入 + 字符串匹配分组
-
+- 继续改进前端
 
 ### 核心功能
 
@@ -77,8 +74,9 @@
     │   ├── config/               # 运行时配置
     │   │   ├── entity_merge_rules.json # 实体合并规则库
     │   │   └── templates/        # Pipeline 模板
-    │   ├── deduped_news/         # 已去重的新闻数据
-    │   ├── raw_news/             # 原始抓取数据
+    │   ├── tmp/                  # 临时文件夹
+    │   │   ├── raw_news/
+    │   │   └── deduped_news/
     │   ├── logs/                 # 系统日志
     │   ├── entities.json         # 实体库
     │   ├── events.json           # 事件库
