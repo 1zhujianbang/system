@@ -1,6 +1,6 @@
 # README.md
 
-# [市场透镜 - Market Lens](https://github.com/1zhujianbang/MarketLens)
+## [市场透镜 - Market Lens](https://github.com/1zhujianbang/MarketLens)
 
 基于全球市场数据和新闻资讯构建的智能感知与决策系统，通过知识图谱和多智能体协作实现从"信息→认知→行动"的闭环。
 
