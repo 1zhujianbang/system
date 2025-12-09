@@ -359,14 +359,8 @@ def process_news_stream():
                         tools.log(f"⚠️ 处理提取结果失败: {e}")
 
             try:
-                is_tmp = False
-                try:
-                    file_path.relative_to(tools.DEDUPED_NEWS_TMP_DIR)
-                    is_tmp = True
-                except Exception:
-                    is_tmp = False
-
-                raw_dir = tools.RAW_NEWS_TMP_DIR if is_tmp else tools.RAW_NEWS_DIR
+                # 仅处理 tmp 目录下的 raw/deduped 文件
+                raw_dir = tools.RAW_NEWS_TMP_DIR
                 raw_file_name = file_path.stem.replace("_deduped", "") + ".jsonl"
                 raw_file_path = raw_dir / raw_file_name
                 if raw_file_path.exists():

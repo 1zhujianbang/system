@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import pandas as pd
 from pathlib import Path
-from src.web.config import ENTITIES_FILE, EVENTS_FILE, RAW_NEWS_DIR, DATA_DIR
+from src.web.config import ENTITIES_FILE, EVENTS_FILE, DATA_DIR
 from src.data.api_client import get_apis_config
 
 # 模板存储目录
@@ -44,14 +44,12 @@ def load_events():
 def get_raw_news_files():
     """
     获取原始新闻文件列表，缓存 300 秒 (5分钟)
-    合并 tmp/raw_news 与 raw_news，并按修改时间倒序。
+    仅使用 tmp/raw_news，并按修改时间倒序。
     """
     files = []
-    for path in (RAW_NEWS_TMP_DIR, RAW_NEWS_DIR):
-        if path.exists():
-            files.extend(path.glob("*.jsonl"))
-    uniq = {f.resolve(): f for f in files}.values()
-    return sorted(uniq, key=lambda x: x.stat().st_mtime, reverse=True)
+    if RAW_NEWS_TMP_DIR.exists():
+        files.extend(RAW_NEWS_TMP_DIR.glob("*.jsonl"))
+    return sorted(files, key=lambda x: x.stat().st_mtime, reverse=True)
 
 @st.cache_data(ttl=60)
 def load_raw_news_file(file_path: Path):

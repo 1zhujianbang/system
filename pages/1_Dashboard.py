@@ -4,6 +4,7 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 import time
+import json
 
 # 添加项目根目录到 path (用于导入 src 模块)
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -11,6 +12,31 @@ sys.path.append(str(ROOT_DIR))
 
 from src.web.config import DATA_DIR, LOGS_DIR
 from src.web import utils
+
+KG_FILE = DATA_DIR / "knowledge_graph.json"
+
+@st.cache_data(ttl=60)
+def load_kg_counts():
+    """
+    从 knowledge_graph.json 统计实体出现次数（基于 edges 的 from 字段）。
+    """
+    counts = {}
+    if KG_FILE.exists():
+        try:
+            with open(KG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            edges = data.get("edges", [])
+            for edge in edges:
+                src = edge.get("from")
+                if src:
+                    counts[src] = counts.get(src, 0) + 1
+            # 如果 edges 为空，尝试从 entities 节点补充一次计数
+            if not counts and isinstance(data.get("entities"), dict):
+                for name in data["entities"].keys():
+                    counts[name] = 1
+        except Exception:
+            pass
+    return counts
 
 st.set_page_config(page_title="Dashboard - Market Lens", page_icon="📊", layout="wide")
 
@@ -40,6 +66,7 @@ with st.spinner("Loading metrics..."):
     
     entities = utils.load_entities()
     entity_count = len(entities)
+    kg_counts = load_kg_counts()
     
     events = utils.load_events()
     event_count = len(events)
@@ -55,17 +82,44 @@ with st.spinner("Loading metrics..."):
     # 实体 Top 10
     top_entities_df = pd.DataFrame()
     if entities:
-        # 假设实体结构: {"Name": {"count": 5, "last_seen": ...}}
-        # 如果没有 count 字段，默认设为 1
+        # 组装实体数据，清理源字段与计数字段，避免前端渲染对象/NaN
         data = []
         for name, info in entities.items():
-            count = info.get("count", 1) if isinstance(info, dict) else 1
-            source = info.get("sources", ["unknown"])[0] if isinstance(info, dict) and info.get("sources") else "unknown"
+            name = str(name)
+            if isinstance(info, dict):
+                count = info.get("count", kg_counts.get(name, 1))
+                src_raw = info.get("sources", [])
+            else:
+                count = kg_counts.get(name, 1)
+                src_raw = []
+
+            # count 数值化
+            try:
+                count = int(count)
+            except Exception:
+                count = 0
+
+            # 源字段转字符串
+            source = "unknown"
+            if src_raw:
+                first = src_raw[0]
+                if isinstance(first, dict):
+                    # 优先 name，其次 id/url
+                    source = first.get("name") or first.get("id") or first.get("url") or "unknown"
+                else:
+                    source = str(first)
+
             data.append({"Entity": name, "Mentions": count, "Source": source})
         
         df_all = pd.DataFrame(data)
         if not df_all.empty:
-            top_entities_df = df_all.sort_values("Mentions", ascending=False).head(10)
+            df_all["Mentions"] = pd.to_numeric(df_all["Mentions"], errors="coerce").fillna(0).astype(int)
+            df_all["Entity"] = df_all["Entity"].astype(str)
+            # 过滤掉全 0 的情况，避免图表 Infinity 警告
+            if df_all["Mentions"].sum() > 0:
+                top_entities_df = df_all.sort_values("Mentions", ascending=False).head(10)
+            else:
+                top_entities_df = pd.DataFrame()
 
 # --- 核心指标卡片 ---
 col1, col2, col3, col4 = st.columns(4)
@@ -118,7 +172,7 @@ with c_log:
              if log_files: log_target = log_files[0]
              
         if log_target.exists():
-            with open(log_target, "r", encoding="utf-8") as f:
+            with open(log_target, "r", encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
                 # 反转显示，最新的在最上面
                 for line in reversed(lines[-50:]):

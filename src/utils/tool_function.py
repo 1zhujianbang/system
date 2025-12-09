@@ -27,10 +27,8 @@ class tools:
     ROOT_DIR = Path(__file__).parent.parent.parent
     DATA_DIR = ROOT_DIR / "data"
     CONFIG_DIR = ROOT_DIR / "config"
-    RAW_NEWS_DIR = DATA_DIR / "raw_news"
     DATA_TMP_DIR = DATA_DIR / "tmp"
     RAW_NEWS_TMP_DIR = DATA_TMP_DIR / "raw_news"
-    DEDUPED_NEWS_DIR = DATA_DIR / "deduped_news"
     DEDUPED_NEWS_TMP_DIR = DATA_TMP_DIR / "deduped_news"
     LOG_FILE = DATA_DIR / "logs" / "agent1.log"
     
@@ -50,8 +48,8 @@ class tools:
     def __init__(self):
         if self._initialized:
             return
-        # 确保目录存在
-        for d in [self.DATA_DIR, self.DATA_TMP_DIR, self.RAW_NEWS_DIR, self.RAW_NEWS_TMP_DIR, self.DEDUPED_NEWS_DIR, self.DEDUPED_NEWS_TMP_DIR, self.DATA_DIR / "logs"]:
+        # 确保目录存在（仅使用 tmp 路径存放新闻）
+        for d in [self.DATA_DIR, self.DATA_TMP_DIR, self.RAW_NEWS_TMP_DIR, self.DEDUPED_NEWS_TMP_DIR, self.DATA_DIR / "logs"]:
             d.mkdir(parents=True, exist_ok=True)
 
         # 实例变量
