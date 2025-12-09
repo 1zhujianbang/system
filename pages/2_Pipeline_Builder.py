@@ -452,6 +452,13 @@ def render_ingestion_tab():
     c2.metric("Max Items", news_limit)
     c3.metric("Auto-Update KG", "Yes" if auto_update_kg else "No")
     gnews_params = st.session_state.get("gnews_params", {})
+
+    st.subheader("图谱更新模式")
+    col_mode_ing, col_forms_ing = st.columns(2)
+    with col_mode_ing:
+        append_only_ing = st.checkbox("仅追加（不改旧数据）- Ingestion", value=True, help="不修改已有实体/事件，只新增不存在的记录")
+    with col_forms_ing:
+        allow_append_forms_ing = st.checkbox("追加旧实体的 original_forms - Ingestion", value=True, help="仅在仅追加模式下生效；关闭则完全不改旧实体字段")
     
     if not selected_sources:
         st.error("❌ No sources selected. Please go back to 'Data Sources' tab.")
@@ -485,6 +492,24 @@ def render_ingestion_tab():
                     "tool": "save_extracted_events_tmp",
                     "inputs": {"events": "$extracted_events"},
                     "output": "events_path"
+                },
+                {
+                    "id": "update_graph_from_ingestion" if not append_only_ing else "append_graph_from_ingestion",
+                    "tool": "update_graph_data" if not append_only_ing else "append_only_update_graph",
+                    "inputs": {"events_list": "$extracted_events", "allow_append_original_forms": allow_append_forms_ing} if append_only_ing else {"events_list": "$extracted_events"},
+                    "output": "kg_update_result_ingestion"
+                },
+                {
+                    "id": "refresh_kg_after_ingestion",
+                    "tool": "refresh_knowledge_graph",
+                    "inputs": {},
+                    "output": "kg_refresh_result_ingestion"
+                },
+                {
+                    "id": "report_ingestion",
+                    "tool": "generate_markdown_report",
+                    "inputs": {"events_list": "$extracted_events", "title": "Ingestion Extracted Events Report"},
+                    "output": "ingestion_report_md"
                 }
             ]
         }
@@ -565,6 +590,48 @@ def render_expansion_tab():
                         st.warning("Selected entities are already in the list.")
                 else:
                     st.warning("Please select entities first.")
+    
+    # 日期时间快捷填充（可选，使用日历选择器生成 ISO8601 字符串并批量填充）
+    with st.expander("日期时间快捷填充（可选）", expanded=False):
+        col_from, col_to = st.columns(2)
+        min_date = datetime(2020, 1, 1).date()
+        max_date = datetime.now().date()
+        with col_from:
+            d_from = st.date_input("From 日期", value=None, min_value=min_date, max_value=max_date, key="gnews_from_date_expansion_picker")
+            t_from = st.time_input("From 时间", value=None, key="gnews_from_time_expansion_picker")
+        with col_to:
+            d_to = st.date_input("To 日期", value=None, min_value=min_date, max_value=max_date, key="gnews_to_date_expansion_picker")
+            t_to = st.time_input("To 时间", value=None, key="gnews_to_time_expansion_picker")
+
+        def combine(dt, tm):
+            if dt is None:
+                return None
+            tm = tm or datetime.min.time()
+            return datetime.combine(dt, tm, tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+
+        from_iso = combine(d_from, t_from)
+        to_iso = combine(d_to, t_to)
+        st.caption(f"From (ISO8601): {from_iso or '未设置'}")
+        st.caption(f"To   (ISO8601): {to_iso or '未设置'}")
+
+        apply_from_all = st.checkbox("将 From 填充到所有行（若设置）", value=False, key="apply_from_all_expansion")
+        apply_to_all = st.checkbox("将 To 填充到所有行（若设置）", value=False, key="apply_to_all_expansion")
+
+        if st.button("应用到任务表", type="primary", key="apply_datetime_expansion"):
+            df = st.session_state.expansion_tasks.copy()
+            if from_iso:
+                if apply_from_all:
+                    df["from"] = from_iso
+                else:
+                    df.loc[(df["from"].isna()) | (df["from"] == ""), "from"] = from_iso
+            if to_iso:
+                if apply_to_all:
+                    df["to"] = to_iso
+                else:
+                    df.loc[(df["to"].isna()) | (df["to"] == ""), "to"] = to_iso
+            st.session_state.expansion_tasks = df
+            st.success("已应用到任务表，请在下方表格确认。")
+            st.rerun()
 
     # 任务表格编辑器
     edited_tasks = st.data_editor(
@@ -592,6 +659,13 @@ def render_expansion_tab():
     c1, c2 = st.columns(2)
     c1.metric("Selected APIs", len(selected_apis))
     c2.metric("Active Tasks", len(active_tasks))
+
+    st.subheader("图谱更新模式")
+    col_mode, col_forms = st.columns(2)
+    with col_mode:
+        append_only_mode = st.checkbox("仅追加（不改旧数据）", value=True, help="不修改已有实体/事件，只新增不存在的记录")
+    with col_forms:
+        allow_append_forms = st.checkbox("追加旧实体的 original_forms", value=True, help="仅在仅追加模式下生效；关闭则完全不改旧实体字段")
     
     if st.button("Start Expansion Task", type="primary", use_container_width=True):
         if not selected_apis:
@@ -621,6 +695,20 @@ def render_expansion_tab():
                     },
                     "output": f"results_{idx}"
             })
+            # 先对拓展结果做事件提取
+            pipeline_steps.append({
+                "id": f"extract_{kw.replace(' ', '_')}_{idx}",
+                "tool": "batch_process_news",
+                "inputs": {"news_list": f"$results_{idx}"},
+                "output": f"extracted_events_{idx}"
+            })
+            # 将提取的事件暂存到 tmp，方便后续预览
+            pipeline_steps.append({
+                "id": f"save_events_{kw.replace(' ', '_')}_{idx}",
+                "tool": "save_extracted_events_tmp",
+                "inputs": {"events": f"$extracted_events_{idx}"},
+                "output": f"events_path_{idx}"
+            })
             pipeline_steps.append({
                 "id": f"persist_{kw.replace(' ', '_')}_{idx}",
                 "tool": "persist_expanded_news_tmp",
@@ -629,6 +717,40 @@ def render_expansion_tab():
                 },
                 "output": f"persist_result_{idx}"
             })
+        # 汇总所有任务的提取结果用于后续更新/报告
+        all_extracted_keys = [f"$extracted_events_{i}" for i in range(len(active_tasks))]
+        if append_only_mode:
+            pipeline_steps.append({
+                "id": "append_graph_from_expansion",
+                "tool": "append_only_update_graph",
+                "inputs": {
+                    "events_list": all_extracted_keys,
+                    "allow_append_original_forms": allow_append_forms
+                },
+                "output": "kg_update_result"
+            })
+        else:
+            pipeline_steps.append({
+                "id": "update_graph_from_expansion",
+                "tool": "update_graph_data",
+                "inputs": {"events_list": all_extracted_keys},
+                "output": "kg_update_result"
+            })
+        pipeline_steps.append({
+            "id": "refresh_kg_after_expansion",
+            "tool": "refresh_knowledge_graph",
+            "inputs": {},
+            "output": "kg_refresh_result"
+        })
+        pipeline_steps.append({
+            "id": "report_expansion",
+            "tool": "generate_markdown_report",
+            "inputs": {
+                "events_list": all_extracted_keys,
+                "title": "Expansion Extracted Events Report"
+            },
+            "output": "expansion_report_md"
+        })
         
         pipeline_def = {
             "name": "Knowledge Expansion Batch",
@@ -644,6 +766,8 @@ def render_maintenance_tab():
     entities_tmp_file = data_dir / "tmp" / "entities_tmp.json"
     events_tmp_file = data_dir / "tmp" / "abstract_to_event_map_tmp.json"
     extracted_dir = data_dir / "tmp"
+    deduped_dir = data_dir / "tmp" / "deduped_news"
+    raw_dir = data_dir / "tmp" / "raw_news"
 
     @st.cache_data(ttl=60)
     def load_json_cached(path: Path):
@@ -663,10 +787,19 @@ def render_maintenance_tab():
         return [str(f) for f in files]
     extracted_files = list_extracted_files(extracted_dir)
 
-    c1, c2, c3 = st.columns(3)
+    @st.cache_data(ttl=60)
+    def list_news_files(base: Path, pattern: str):
+        files = sorted(base.glob(pattern), key=lambda x: x.stat().st_mtime, reverse=True)
+        return [str(f) for f in files]
+    deduped_files = list_news_files(deduped_dir, "*.jsonl")
+    raw_files = list_news_files(raw_dir, "*.jsonl")
+
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("临时实体（缓存条数）", len(entities_tmp))
     c2.metric("临时事件（缓存条数）", len(events_tmp))
     c3.metric("提取结果文件数", len(extracted_files))
+    c4.metric("去重新闻文件数", len(deduped_files))
+    c5.metric("原始新闻文件数", len(raw_files))
 
     with st.expander("查看临时实体 / 事件示例", expanded=False):
         if entities_tmp:
@@ -711,6 +844,18 @@ def render_maintenance_tab():
             st.table({"path": extracted_files[:5]})
         else:
             st.info("暂无提取结果文件")
+
+        if deduped_files:
+            st.write("去重新闻文件（最新5个）")
+            st.table({"path": deduped_files[:5]})
+        else:
+            st.info("暂无去重新闻文件")
+
+        if raw_files:
+            st.write("原始新闻文件（最新5个）")
+            st.table({"path": raw_files[:5]})
+        else:
+            st.info("暂无原始新闻文件")
     
     with st.form("maintenance_form"):
         c1, c2 = st.columns(2)
@@ -721,6 +866,11 @@ def render_maintenance_tab():
         with c2:
             st.subheader("Cleaning")
             rm_iso = st.checkbox("Remove Isolated Nodes")
+        
+        st.subheader("导入 tmp 抽取结果")
+        use_tmp_events = st.checkbox("刷新前先追加 tmp/extracted_events_*.jsonl", value=True)
+        max_tmp_files = st.number_input("最多读取文件数（0=全部）", min_value=0, value=0, step=1)
+        allow_forms_tmp = st.checkbox("追加旧实体 original_forms（追加模式）", value=True)
             
         submitted = st.form_submit_button("🚀 Run Maintenance", type="primary", use_container_width=True)
         
@@ -729,6 +879,20 @@ def render_maintenance_tab():
             "name": "Graph Maintenance",
             # 调用 Agent3 刷新压缩知识图谱（基于现有实体/事件文件）
             "steps": [
+                *(
+                    [
+                        {
+                            "id": "append_tmp_events",
+                            "tool": "append_tmp_extracted_events",
+                            "inputs": {
+                                "max_files": int(max_tmp_files),
+                                "allow_append_original_forms": allow_forms_tmp
+                            },
+                            "output": "tmp_append_result"
+                        }
+                    ]
+                    if use_tmp_events else []
+                ),
                 {
                     "id": "refresh_kg",
                     "tool": "refresh_knowledge_graph",
@@ -800,11 +964,36 @@ def render_custom_builder():
         if st.button("🚀 Run Pipeline", type="primary", use_container_width=True):
             execute_pipeline(pipeline_def)
 
+def render_snapshots_tab():
+    st.header("📸 Knowledge Graph Snapshots")
+    st.caption("生成/查看可视化快照（kg_visual.json / kg_visual_timeline.json）")
+    if st.button("生成快照", type="primary"):
+        try:
+            from src.functions.graph_ops import generate_kg_visual_snapshots
+            res = generate_kg_visual_snapshots()
+            st.success(f"生成完成: {res}")
+        except Exception as e:
+            st.error(f"生成失败: {e}")
+    data_root = ROOT_DIR / "data"
+    vis_path = data_root / "kg_visual.json"
+    tl_path = data_root / "kg_visual_timeline.json"
+    st.write("快照文件路径：")
+    st.write(f"- 图谱快照: {vis_path}")
+    st.write(f"- 时间线快照: {tl_path}")
+    for p in [vis_path, tl_path]:
+        if p.exists():
+            ts = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            st.info(f"{p.name} 已存在，大小 {p.stat().st_size} 字节，修改时间 {ts}")
+        else:
+            st.warning(f"{p.name} 尚未生成")
+
 # --- 主导航 ---
-tabs = st.tabs(["Configuration","Ingestion", "Expansion", "Maintenance", "Custom Builder"])
+tabs = st.tabs(["Configuration","Ingestion", "Expansion", "Maintenance", "Snapshots", "Custom Builder"])
 
 with tabs[0]: render_configuration_tab()
 with tabs[1]: render_ingestion_tab()
 with tabs[2]: render_expansion_tab()
 with tabs[3]: render_maintenance_tab()
-with tabs[4]: render_custom_builder()
+with tabs[4]: render_snapshots_tab()
+with tabs[5]: render_custom_builder()
+

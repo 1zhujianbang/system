@@ -988,6 +988,135 @@ class KnowledgeGraph:
         except Exception as e:
             self.tools.log(f"[知识图谱] ❌ 保存数据失败: {e}")
     
+    def append_only_update(self, events_list: List[Dict[str, Any]], default_source: str = "auto_pipeline", allow_append_original_forms: bool = True) -> Dict[str, int]:
+        """
+        只追加新数据，不改动已有实体/事件的旧字段。
+        - 实体已存在：不改 first_seen/sources，默认仅可选地追加原始表述
+        - 事件已存在（同 abstract）：跳过，不改旧事件
+        """
+        if not events_list:
+            return {"added_entities": 0, "added_events": 0}
+
+        if not self.build_graph():
+            return {"added_entities": 0, "added_events": 0}
+
+        # 准备 LLM 去重映射（仅映射“新实体”到“已有实体”，不改旧实体字段）
+        self._init_llm_pool()
+        merge_rules = self.merge_rules or {}
+        existing_entities = set(self.graph["entities"].keys())
+
+        # 收集新实体集合
+        new_entities_set = set()
+        for ev in events_list:
+            ents = ev.get("entities", []) or []
+            ents = [merge_rules.get(e, e) for e in ents if e]
+            for e in ents:
+                if e not in existing_entities:
+                    new_entities_set.add(e)
+
+        # 构建映射：新实体 -> 已有实体（LLM 判断可能同名）
+        llm_merge_map: Dict[str, str] = {}
+        if self.llm_pool and new_entities_set:
+            # 分桶降低上下文长度：按首字母/字符分桶
+            from collections import defaultdict
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            buckets = defaultdict(list)
+            for ent in new_entities_set:
+                prefix = ent[0] if ent else "#"
+                buckets[prefix].append(ent)
+
+            llm_lock = threading.Lock()
+            max_workers = int(self.settings.get("entity_max_workers", 3)) or 1
+
+            def handle_bucket(prefix: str, bucket_new: List[str]):
+                local_map = {}
+                # 取同前缀的部分已有实体做对比，避免过长
+                existing_subset = [e for e in existing_entities if e.startswith(prefix)]
+                existing_subset = existing_subset[: max(10, min(80, len(existing_subset)))]
+                candidates = list(existing_subset) + list(bucket_new)
+                if len(candidates) < 2:
+                    return local_map
+                try:
+                    prompt = self._prepare_entity_compression_prompt_strict(candidates)
+                    resp = self._call_llm_limited(prompt, timeout=60, limiter=None)
+                    groups = self._parse_entity_response(resp) if resp else []
+                    for g in groups:
+                        if len(g) < 2:
+                            continue
+                        primary, dupes = self._choose_primary_entity(g)
+                        if primary in existing_entities:
+                            for d in dupes:
+                                if d in new_entities_set:
+                                    local_map[d] = primary
+                except Exception as e:
+                    self.tools.log(f"[知识图谱] 追加模式 LLM 去重失败: {e}")
+                return local_map
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [executor.submit(handle_bucket, p, b) for p, b in buckets.items()]
+                for fut in as_completed(futures):
+                    res_map = fut.result() or {}
+                    if res_map:
+                        with llm_lock:
+                            llm_merge_map.update(res_map)
+
+        added_entities = 0
+        added_events = 0
+
+        def normalize_entity(name: str) -> str:
+            if not name:
+                return name
+            name = merge_rules.get(name, name)
+            return llm_merge_map.get(name, name)
+
+        for ev in events_list:
+            ents = ev.get("entities", []) or []
+            ents = [normalize_entity(e) for e in ents]
+            ents_original = ev.get("entities_original") or ents
+            src = ev.get("source", default_source)
+            published_at = ev.get("published_at") or ev.get("datetime") or ""
+
+            # 追加实体（仅当不存在）
+            for ent, ent_orig in zip(ents, ents_original):
+                if not ent:
+                    continue
+                if ent not in self.graph["entities"]:
+                    self.graph["entities"][ent] = {
+                        "first_seen": published_at or datetime.utcnow().isoformat(),
+                        "sources": [src] if src else [],
+                        "original_forms": [ent_orig] if ent_orig else []
+                    }
+                    added_entities += 1
+                else:
+                    # 不改旧字段，仅可选追加原始表述
+                    if allow_append_original_forms and ent_orig:
+                        forms = self.graph["entities"][ent].get("original_forms", [])
+                        if ent_orig not in forms:
+                            forms.append(ent_orig)
+                            self.graph["entities"][ent]["original_forms"] = forms
+
+            # 追加事件（仅当摘要不存在）
+            abstract = ev.get("abstract")
+            if abstract and abstract not in self.graph["events"]:
+                self.graph["events"][abstract] = {
+                    "abstract": abstract,
+                    "entities": ents,
+                    "event_summary": ev.get("event_summary", ""),
+                    "sources": [src] if src else [],
+                    "first_seen": published_at
+                }
+                added_events += 1
+
+        # 重建边并保存（只在有新增时）
+        if added_entities or added_events:
+            self._build_edges()
+            self._save_data()
+            self.tools.log(f"[知识图谱] 追加模式完成：新增实体 {added_entities}，新增事件 {added_events}")
+        else:
+            self.tools.log("[知识图谱] 追加模式：没有新增实体/事件")
+
+        return {"added_entities": added_entities, "added_events": added_events}
+    
     def refresh_graph(self):
         """刷新知识图谱：构建、压缩、更新"""
         self.tools.log("[知识图谱] 开始刷新知识图谱")
@@ -1012,6 +1141,13 @@ def refresh_graph():
     """刷新知识图谱（供外部调用）"""
     kg = KnowledgeGraph()
     kg.refresh_graph()
+
+def append_only_update_graph(events_list: List[Dict[str, Any]], default_source: str = "auto_pipeline", allow_append_original_forms: bool = True) -> Dict[str, int]:
+    """
+    只追加新事件/实体到现有图谱，不修改旧记录。
+    """
+    kg = KnowledgeGraph()
+    return kg.append_only_update(events_list, default_source=default_source, allow_append_original_forms=allow_append_original_forms)
 
 def build_graph() -> bool:
     """构建知识图谱"""
