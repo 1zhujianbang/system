@@ -479,6 +479,12 @@ def render_ingestion_tab():
                     "tool": "batch_process_news",
                     "inputs": {"news_list": "$raw_news_data"},
                     "output": "extracted_events"
+                },
+                {
+                    "id": "save_events_tmp",
+                    "tool": "save_extracted_events_tmp",
+                    "inputs": {"events": "$extracted_events"},
+                    "output": "events_path"
                 }
             ]
         }
@@ -615,6 +621,14 @@ def render_expansion_tab():
                     },
                     "output": f"results_{idx}"
             })
+            pipeline_steps.append({
+                "id": f"persist_{kw.replace(' ', '_')}_{idx}",
+                "tool": "persist_expanded_news_tmp",
+                "inputs": {
+                    "expanded_news": f"results_{idx}"
+                },
+                "output": f"persist_result_{idx}"
+            })
         
         pipeline_def = {
             "name": "Knowledge Expansion Batch",
@@ -629,8 +643,10 @@ def render_maintenance_tab():
     data_dir = ROOT_DIR / "data"
     entities_tmp_file = data_dir / "tmp" / "entities_tmp.json"
     events_tmp_file = data_dir / "tmp" / "abstract_to_event_map_tmp.json"
+    extracted_dir = data_dir / "tmp"
 
-    def load_json(path):
+    @st.cache_data(ttl=60)
+    def load_json_cached(path: Path):
         try:
             if path.exists():
                 with open(path, "r", encoding="utf-8") as f:
@@ -639,12 +655,18 @@ def render_maintenance_tab():
             st.warning(f"{path.name} 读取失败: {e}")
         return {}
 
-    entities_tmp = load_json(entities_tmp_file)
-    events_tmp = load_json(events_tmp_file)
+    entities_tmp = load_json_cached(entities_tmp_file)
+    events_tmp = load_json_cached(events_tmp_file)
+    @st.cache_data(ttl=60)
+    def list_extracted_files(base: Path):
+        files = sorted(base.glob("extracted_events_*.jsonl"), key=lambda x: x.stat().st_mtime, reverse=True)
+        return [str(f) for f in files]
+    extracted_files = list_extracted_files(extracted_dir)
 
-    c1, c2 = st.columns(2)
-    c1.metric("临时实体", len(entities_tmp))
-    c2.metric("临时事件", len(events_tmp))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("临时实体（缓存条数）", len(entities_tmp))
+    c2.metric("临时事件（缓存条数）", len(events_tmp))
+    c3.metric("提取结果文件数", len(extracted_files))
 
     with st.expander("查看临时实体 / 事件示例", expanded=False):
         if entities_tmp:
@@ -664,6 +686,12 @@ def render_maintenance_tab():
             st.dataframe(df_evt, use_container_width=True)
         else:
             st.info("暂无临时事件数据")
+        
+        if extracted_files:
+            st.write("提取结果文件（最新5个）")
+            st.table({"path": extracted_files[:5]})
+        else:
+            st.info("暂无提取结果文件")
     
     with st.form("maintenance_form"):
         c1, c2 = st.columns(2)
@@ -691,6 +719,15 @@ def render_maintenance_tab():
             ]
         }
         execute_pipeline(pipeline_def)
+        # 清理临时缓存文件并刷新缓存
+        try:
+            for p in [entities_tmp_file, events_tmp_file]:
+                if p.exists():
+                    p.unlink()
+            st.cache_data.clear()
+            st.success("已清理临时缓存文件")
+        except Exception as e:
+            st.warning(f"清理缓存失败: {e}")
 
 def render_custom_builder():
     st.header("🛠️ Custom Pipeline Builder")

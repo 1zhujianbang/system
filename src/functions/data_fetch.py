@@ -4,6 +4,7 @@ from ..core.registry import register_tool
 from ..data import news_collector
 from ..utils.tool_function import tools as Tools
 import json
+import asyncio
 
 @register_tool(
     name="fetch_news_stream",
@@ -35,6 +36,18 @@ async def fetch_news_stream(
         新闻列表 (List[Dict])
     """
     tools = Tools()
+    # 配置驱动的并发上限（默认 5）
+    concurrency = 5
+    try:
+        import yaml
+        cfg_path = tools.CONFIG_DIR / "config.yaml"
+        if cfg_path.exists():
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            a1_cfg = data.get("agent1_config", {}) or {}
+            if isinstance(a1_cfg, dict):
+                concurrency = int(a1_cfg.get("max_workers", concurrency))
+    except Exception:
+        pass
     
     # 初始化 API Pool
     news_collector.init_api_pool()
@@ -51,53 +64,52 @@ async def fetch_news_stream(
         tools.log("Warning: No valid sources to fetch from.")
         return []
 
-    all_news = []
-    
-    for source_name in target_sources:
-        try:
-            collector = news_collector.API_POOL.get_collector(source_name)
-            
-            # 使用 async with 确保连接正确管理
-            async with collector:
-                # 若提供 query 则使用 search，否则使用 top_headlines
-                if query:
-                    news = await collector.search(
-                        query=query,
-                        from_=from_,
-                        to=to,
-                        limit=limit,
-                        in_fields=in_fields,
-                        nullable=nullable,
-                        sortby=sortby,
-                        page=page,
-                        truncate=truncate,
-                    )
-                else:
-                    news = await collector.get_top_headlines(
-                        category=category,
-                        limit=limit,
-                        nullable=nullable,
-                        from_=from_,
-                        to=to,
-                        query=query,
-                        page=page,
-                        truncate=truncate,
-                    )
+    sem = asyncio.Semaphore(concurrency if concurrency > 0 else 1)
 
-                # 确保 source 字段存在
-                for item in news:
-                    if "source" not in item:
-                        item["source"] = source_name
-                    
-                    # 转换 datetime 为 ISO 字符串以便序列化
-                    if "datetime" in item and hasattr(item["datetime"], "isoformat"):
-                        item["datetime"] = item["datetime"].isoformat()
-                        
-                all_news.extend(news)
-                tools.log(f"Fetched {len(news)} items from {source_name}")
-                 
+    async def fetch_one(source_name: str) -> List[Dict[str, Any]]:
+        try:
+            async with sem:
+                collector = news_collector.API_POOL.get_collector(source_name)
+                async with collector:
+                    if query:
+                        news = await collector.search(
+                            query=query,
+                            from_=from_,
+                            to=to,
+                            limit=limit,
+                            in_fields=in_fields,
+                            nullable=nullable,
+                            sortby=sortby,
+                            page=page,
+                            truncate=truncate,
+                        )
+                    else:
+                        news = await collector.get_top_headlines(
+                            category=category,
+                            limit=limit,
+                            nullable=nullable,
+                            from_=from_,
+                            to=to,
+                            query=query,
+                            page=page,
+                            truncate=truncate,
+                        )
+                    for item in news:
+                        if "source" not in item:
+                            item["source"] = source_name
+                        if "datetime" in item and hasattr(item["datetime"], "isoformat"):
+                            item["datetime"] = item["datetime"].isoformat()
+                    tools.log(f"Fetched {len(news)} items from {source_name}")
+                    return news
         except Exception as e:
             tools.log(f"Error fetching from {source_name}: {e}")
+        return []
+
+    results = await asyncio.gather(*[fetch_one(src) for src in target_sources])
+
+    all_news = []
+    for news in results:
+        all_news.extend(news)
 
     # 按时间倒序排序
     all_news.sort(key=lambda x: x.get("datetime") or "", reverse=True)
@@ -236,6 +248,21 @@ async def search_news_by_keywords(
     if news_collector.API_POOL is None:
         raise RuntimeError("API Pool failed to initialize")
 
+    # 并发上限（默认 5，优先读取 config.agent2_config.max_workers）
+    concurrency = 5
+    try:
+        import yaml
+        cfg_path = Tools().CONFIG_DIR / "config.yaml"
+        if cfg_path.exists():
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            a2_cfg = data.get("agent2_config", {}) or {}
+            if isinstance(a2_cfg, dict):
+                concurrency = int(a2_cfg.get("max_workers", concurrency))
+    except Exception:
+        pass
+
+    sem = asyncio.Semaphore(concurrency if concurrency > 0 else 1)
+
     available_sources = news_collector.API_POOL.list_available_sources()
     if apis:
         target_sources = [s for s in apis if s in available_sources]
@@ -246,46 +273,48 @@ async def search_news_by_keywords(
         tools.log("Warning: No valid sources to search from.")
         return []
 
-    all_news: List[Dict[str, Any]] = []
-
-    for source_name in target_sources:
+    async def search_one(source_name: str) -> List[Dict[str, Any]]:
         try:
-            collector = news_collector.API_POOL.get_collector(source_name)
-            async with collector:
-                news = await collector.search(
-                    query=query_str,
-                    from_=from_,
-                    to=to,
-                    limit=limit,
-                    in_fields=in_fields,
-                    nullable=nullable,
-                    sortby=sortby,
-                    page=page,
-                    truncate=truncate,
-                )
-                # fallback: 若未提供 query（极端情况），尝试 top-headlines
-                if not news and not query_str:
-                    news = await collector.get_top_headlines(
-                        category=category,
-                        limit=limit,
-                        nullable=nullable,
+            async with sem:
+                collector = news_collector.API_POOL.get_collector(source_name)
+                async with collector:
+                    news = await collector.search(
+                        query=query_str,
                         from_=from_,
                         to=to,
-                        query=None,
+                        limit=limit,
+                        in_fields=in_fields,
+                        nullable=nullable,
+                        sortby=sortby,
                         page=page,
                         truncate=truncate,
                     )
-
-                for item in news:
-                    if "source" not in item:
-                        item["source"] = source_name
-                    if "datetime" in item and hasattr(item["datetime"], "isoformat"):
-                        item["datetime"] = item["datetime"].isoformat()
-                all_news.extend(news)
-                tools.log(f"Fetched {len(news)} items from {source_name} with query: {query_str}")
+                    if not news and not query_str:
+                        news = await collector.get_top_headlines(
+                            category=category,
+                            limit=limit,
+                            nullable=nullable,
+                            from_=from_,
+                            to=to,
+                            query=None,
+                            page=page,
+                            truncate=truncate,
+                        )
+                    for item in news:
+                        if "source" not in item:
+                            item["source"] = source_name
+                        if "datetime" in item and hasattr(item["datetime"], "isoformat"):
+                            item["datetime"] = item["datetime"].isoformat()
+                    tools.log(f"Fetched {len(news)} items from {source_name} with query: {query_str}")
+                    return news
         except Exception as e:
             tools.log(f"Error searching from {source_name}: {e}")
+        return []
 
+    results = await asyncio.gather(*[search_one(src) for src in target_sources])
+    all_news: List[Dict[str, Any]] = []
+    for news in results:
+        all_news.extend(news)
     all_news.sort(key=lambda x: x.get("datetime") or "", reverse=True)
     return all_news
 

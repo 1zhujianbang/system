@@ -1,100 +1,49 @@
-# =============================================
-# AI Market Analysis System 配置文件
-# =============================================
-
-# 用户基础配置
 user_config:
-  # 必需的用户信息
-  user_id: "default_user"
-  api_key: "test_api_key"
-  api_secret: "test_api_secret"
-  
-  # 市场符号配置（支持全球股票、外汇、商品等）
+  user_id: default_user
+  api_key: test_api_key
+  api_secret: test_api_secret
   symbols:
-    - "AAPL"
-    - "MSFT"
-    - "GOOGL"
-    - "EUR/USD"
-    - "GBP/JPY"
-    - "GOLD"
-    - "OIL"
-  
-  # 分析风险偏好: conservative(保守), moderate(中性), aggressive(激进)
-  risk_preference: "moderate"
-
-# 模型配置
+  - AAPL
+  - MSFT
+  - GOOGL
+  - EUR/USD
+  - GBP/JPY
+  - GOLD
+  - OIL
+  risk_preference: moderate
 models_config:
-  # 模型名称（对应models目录下的模型文件）
-  model_name: "transformer_v2_7d.pt"
-  
-  # 模型类型（符合Pydantic验证要求）
-  model_type: "transformer"
-  
-  # 数据时间窗口（用于分析的小时数）
+  model_name: placeholder
+  model_type: transformer
   data_window: 168
-  
-  # 预测目标（Pydantic必需字段）
-  prediction_target: "close"
-  
-  # 预测范围（Pydantic必需字段）
+  prediction_target: close
   prediction_horizon: 24
-  
-  # 特征列表
-  features:
-    # 开盘价 api自带参数
-    - "open"
-    # 最高价 api自带参数
-    - "high" 
-    # 最低价 api自带参数
-    - "low"
-    # 收盘价 api自带参数
-    - "close"
-    # 成交量 api自带参数
-    - "volume"
-    # RSI周期 由talib计算器计算
-    - "rsi"
-    # MACD周期 由talib计算器计算
-    - "macd"
-    # 布林带上轨 由talib计算器计算
-    - "bollinger_upper"
-    # 布林带下轨 由talib计算器计算
-    - "bollinger_lower"
-    # 移动平均线 由talib计算器计算
-    - "ma_20"
-    - "ma_50"
-    # 量比 由talib计算器计算
-    - "volume_ratio"
-    # 收益率 由talib计算器计算
-    - "returns_1"
-    # 平均真实波幅 由talib计算器计算
-    - "atr"
-  
-  # 模型参数
-  hyperparameters:
-    sequence_length: 96
-    batch_size: 32
-    learning_rate: 0.001
-    dropout_rate: 0.2
-
-# 数据配置
 data_config:
-  # 数据源（符合Pydantic验证要求）
-  data_source: "exchange"
-
-  # 代理设置（如有需要）
-  proxy: "http://154.83.14.105:80/"
-  
-  # 时间框架: "1M", "5M", "15M", "1H", "4H", "1D"
-  timeframe: "1H"
-  
-  # 历史数据获取天数
+  data_source: exchange
+  proxy: ''
+  timeframe: 1H
   historical_days: 30
-  
-  # 数据更新间隔（秒）
   update_interval: 60
-
-
-# =============================================
-# 配置版本（勿修改）
-config_version: "1.0.0"
-# =============================================
+config_version: 1.0.0
+agent3_config:
+  entity_batch_size: 80
+  event_batch_size: 15
+  event_bucket_days: 7
+  event_bucket_entity_overlap: 1
+  event_bucket_max_size: 40
+  event_precluster_similarity: 0.92
+  event_precluster_limit: 300
+  entity_precluster_similarity: 0.93
+  entity_precluster_limit: 500
+  max_summary_chars: 360
+  entity_max_workers: 7
+  event_max_workers: 7
+  rate_limit_per_sec: 6.0
+  entity_evidence_per_entity: 2
+  entity_evidence_max_chars: 400
+agent1_config:
+  max_workers: 7
+  rate_limit_per_sec: 6.0
+  dedupe_threshold: 4
+agent2_config:
+  max_workers: 7
+  rate_limit_per_sec: 6.0

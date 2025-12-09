@@ -5,7 +5,7 @@
 核心原则：
 - 实体 = 能签署合同、被起诉、发布公告、拥有银行账户的主体
   （自然人、公司、政府机构、国家、地区、国际组织）
-- 排除：代币名称、技术术语、抽象概念、情绪词、泛称
+- 排除：技术术语、抽象概念、情绪词、泛称
 - 提取即自动写入 entities.json，无需人工审核
 - 每个事件生成唯一摘要，并关联实体与事件描述
 - 自动更新知识图谱，维护实体-事件关系网络
@@ -28,12 +28,37 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 from dotenv import load_dotenv
 from ..utils.tool_function import tools
 tools = tools()
+load_dotenv(dotenv_path=tools.CONFIG_DIR / ".env.local")
 from .api_client import LLMAPIPool
 from ..utils.entity_updater import update_entities, update_abstract_map
 from .agent3 import refresh_graph
 API_POOL = None
-MAX_WORKERS = int(os.getenv("AGENT1_MAX_WORKERS", "4"))
-RATE_LIMIT_PER_SEC = float(os.getenv("AGENT1_RATE_LIMIT_PER_SEC", "1.5"))
+
+# ---------- 配置加载：优先 config.yaml，再允许环境变量覆盖 ----------
+def _load_agent1_settings():
+    defaults = {
+        "max_workers": 4,
+        "rate_limit_per_sec": 1.5,
+        "dedupe_threshold": 3,
+    }
+    cfg_path = tools.CONFIG_DIR / "config.yaml"
+    try:
+        import yaml  # 局部导入，避免硬依赖
+        if cfg_path.exists():
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            cfg = data.get("agent1_config", {})
+            if isinstance(cfg, dict):
+                for k, v in cfg.items():
+                    if k in defaults:
+                        defaults[k] = v
+    except Exception:
+        pass
+    return defaults
+
+_agent1_settings = _load_agent1_settings()
+MAX_WORKERS = int(_agent1_settings["max_workers"])
+RATE_LIMIT_PER_SEC = float(_agent1_settings["rate_limit_per_sec"])
+tools.DEDUPE_THRESHOLD = int(_agent1_settings["dedupe_threshold"])
 
 def init_api_pool():
     global API_POOL

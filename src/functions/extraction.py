@@ -2,6 +2,10 @@ from typing import List, Dict, Any
 from ..core.registry import register_tool
 from ..agents.agent1 import llm_extract_events as _llm_extract
 from ..agents.agent1 import NewsDeduplicator
+from ..agents import agent2
+import json
+from pathlib import Path
+import time
 
 @register_tool(
     name="extract_entities_events",
@@ -112,3 +116,48 @@ async def batch_process_news(news_list: List[Dict[str, Any]], limit: int = -1) -
             print(f"Extraction failed for news {title[:20]}: {e}")
             
     return all_events
+
+
+@register_tool(
+    name="persist_expanded_news_tmp",
+    description="将拓展新闻写入 tmp/raw_news & tmp/deduped_news，并返回路径",
+    category="Workflow"
+)
+def persist_expanded_news_tmp(expanded_news: List[Dict[str, Any]]) -> Dict[str, str]:
+    """
+    为前端调用的包装：落地拓展新闻到 tmp，并返回文件路径。
+    """
+    processed_ids = set()
+    if Path(agent2.tools.PROCESSED_IDS_FILE).exists():
+        try:
+            processed_ids = set(
+                line.strip()
+                for line in Path(agent2.tools.PROCESSED_IDS_FILE).read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            )
+        except Exception:
+            processed_ids = set()
+
+    deduped_path = agent2.persist_expanded_news_to_tmp(expanded_news, processed_ids)
+    return {
+        "deduped_path": str(deduped_path) if deduped_path else "",
+        "raw_path": str(agent2.tools.RAW_NEWS_TMP_DIR) if deduped_path else "",
+    }
+
+
+@register_tool(
+    name="save_extracted_events_tmp",
+    description="将提取的事件列表写入 data/tmp/extracted_events_*.jsonl，并返回路径",
+    category="Data Processing"
+)
+def save_extracted_events_tmp(events: List[Dict[str, Any]]) -> Dict[str, str]:
+    if not events:
+        return {"path": ""}
+    ts = time.strftime("%Y%m%d%H%M%S")
+    out_dir = agent2.tools.DATA_TMP_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"extracted_events_{ts}.jsonl"
+    with open(out_path, "w", encoding="utf-8") as f:
+        for ev in events:
+            f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+    return {"path": str(out_path)}

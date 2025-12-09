@@ -33,6 +33,32 @@ from .agent3 import refresh_graph  # 导入知识图谱刷新功能
 # 初始化工具
 tools = tools()
 
+# 环境变量/配置加载
+load_dotenv(dotenv_path=tools.CONFIG_DIR / ".env.local")
+
+def _load_agent2_settings():
+    defaults = {
+        "max_workers": 3,
+        "rate_limit_per_sec": 1.0,
+    }
+    cfg_path = tools.CONFIG_DIR / "config.yaml"
+    try:
+        import yaml
+        if cfg_path.exists():
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            cfg = data.get("agent2_config", {})
+            if isinstance(cfg, dict):
+                for k, v in cfg.items():
+                    if k in defaults:
+                        defaults[k] = v
+    except Exception:
+        pass
+    return defaults
+
+_agent2_settings = _load_agent2_settings()
+AGENT2_MAX_WORKERS = _agent2_settings["max_workers"]
+AGENT2_RATE_LIMIT = _agent2_settings["rate_limit_per_sec"]
+
 # 初始化数据API池 - 使用更新后的API池实现
 data_api_pool = DataAPIPool()
 
@@ -304,52 +330,65 @@ async def process_expanded_news(expanded_news: List[Dict]) -> int:
     # 创建去重集合（ID去重）
     seen_news = set()
     
-    for news in expanded_news:
+    # 并发控制
+    sem = asyncio.Semaphore(AGENT2_MAX_WORKERS if AGENT2_MAX_WORKERS > 0 else 1)
+    limiter_interval = 1.0 / AGENT2_RATE_LIMIT if AGENT2_RATE_LIMIT > 0 else 0
+    limiter_lock = asyncio.Lock()
+
+    async def rate_limit():
+        if limiter_interval <= 0:
+            return
+        async with limiter_lock:
+            # 简单串行限速
+            await asyncio.sleep(limiter_interval)
+
+    async def handle_one(news: Dict) -> int:
+        nonlocal processed_count
         try:
-            # 1. 检查新闻是否已处理（ID去重）
-            news_id = news.get('id')
-            source = news.get('source', 'unknown')
-            if news_id:
-                news_key = f"{source}:{news_id}"
-                if news_key in seen_news:
-                    continue
-                seen_news.add(news_key)
-            
-            title = news.get('title', '')
-            content = news.get('content', '')
-            
-            if not title:
-                continue
+            async with sem:
+                news_id = news.get('id')
+                source = news.get('source', 'unknown')
+                if news_id:
+                    news_key = f"{source}:{news_id}"
+                    if news_key in seen_news:
+                        return 0
+                    seen_news.add(news_key)
                 
-            # 2. 使用内容相似度去重（基于simhash）
-            news_text = f"{title} {content}".strip()
-            if deduplicator.is_duplicate(news_text):
-                continue
-            
-            # 提取实体和事件
-            extracted = llm_extract_events(title, content)
-            
-            if extracted:
-                all_entities = []
-                for ev in extracted:
-                    all_entities.extend(ev['entities'])
-                
-                if all_entities:
-                    # 优先使用新闻自身的时间戳
-                    published_at = news.get('datetime')
-                    if published_at and isinstance(published_at, datetime):
-                        published_at = published_at.isoformat()
+                title = news.get('title', '')
+                content = news.get('content', '')
+                if not title:
+                    return 0
+
+                news_text = f"{title} {content}".strip()
+                if deduplicator.is_duplicate(news_text):
+                    return 0
+
+                await rate_limit()
+                loop = asyncio.get_running_loop()
+                extracted = await loop.run_in_executor(None, llm_extract_events, title, content)
+
+                if extracted:
+                    all_entities = []
+                    for ev in extracted:
+                        all_entities.extend(ev['entities'])
                     
-                    # 更新实体库和事件映射（在agent2中，我们没有提取原始词，所以使用实体名称作为原始词）
-                    all_entities_original = all_entities  # 使用实体名称作为原始词
-                    update_entities(all_entities, all_entities_original, source, published_at)
-                    update_abstract_map(extracted, source, published_at)
-                    
-                    processed_count += 1
-                    
+                    if all_entities:
+                        published_at = news.get('datetime')
+                        if published_at and isinstance(published_at, datetime):
+                            published_at = published_at.isoformat()
+                        
+                        all_entities_original = all_entities
+                        update_entities(all_entities, all_entities_original, source, published_at)
+                        update_abstract_map(extracted, source, published_at)
+                        return 1
         except Exception as e:
             tools.log(f"⚠️ 处理拓展新闻失败: {e}")
-    
+        return 0
+
+    tasks = [handle_one(news) for news in expanded_news]
+    results = await asyncio.gather(*tasks)
+    processed_count = sum(results)
+
     return processed_count
 
 

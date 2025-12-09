@@ -36,12 +36,16 @@
   "文森特·卡雷曼斯": {
     "first_seen": "2025-12-06T03:37:00+00:00",
     "sources": [
-      "凤凰网",
-      "腾讯新闻"
+      "tve24.ru",
+      "腾讯新闻",
+      "凤凰网"
     ],
     "original_forms": [
+      "Елену",
       "Vincent Karremans",
-      "文森特·卡雷曼斯"
+      "文森特·卡雷曼斯",
+      "卡雷曼斯",
+      "叶莲娜"
     ]
   },
   "荷兰自由党": {
@@ -501,19 +505,20 @@
   "法国": {
     "first_seen": "2025-11-07T11:03:40+00:00",
     "sources": [
-      "fakty.com.ua",
-      "rfi",
       "franceinfo",
+      "rfi",
       "le parisien",
-      "奇摩新聞",
-      "gnews"
+      "gnews",
+      "fakty.com.ua",
+      "奇摩新聞"
     ],
     "original_forms": [
-      "París",
-      "法國",
-      "Франции",
       "la France",
       "France",
+      "París",
+      "Франции",
+      "法國",
+      "法兰西共和国",
       "Франції",
       "法国"
     ]
@@ -769,22 +774,17 @@
       "National Press and Publication Administration of China"
     ]
   },
-  "《费加罗报》": {
-    "first_seen": "2025-11-07T11:03:40+00:00",
-    "sources": [
-      "rfi"
-    ],
-    "original_forms": [
-      "《費加羅報》"
-    ]
-  },
   "中国海军": {
     "first_seen": "2025-11-07T11:03:40+00:00",
     "sources": [
+      "gnews",
       "rfi"
     ],
     "original_forms": [
-      "中國海軍"
+      "中國海軍",
+      "中国人民解放军空军",
+      "中国海军",
+      "中国人民解放军"
     ]
   },
   "Waymo": {
@@ -992,22 +992,6 @@
       "Obsidian Entertainment"
     ]
   },
-  "埃马纽埃尔·马克龙": {
-    "first_seen": "2025-12-06T17:14:00+00:00",
-    "sources": [
-      "la política online",
-      "fakty.com.ua",
-      "gnews"
-    ],
-    "original_forms": [
-      "Еммануель Макрон",
-      "Эммануэль Макрон",
-      "Milei",
-      "埃马纽埃尔·马克龙",
-      "Macron",
-      "哈维尔·米莱"
-    ]
-  },
   "弗拉基米尔·泽连斯基": {
     "first_seen": "2025-12-06T17:14:00+00:00",
     "sources": [
@@ -1106,6 +1090,8 @@
       "news.cnyes.com"
     ],
     "original_forms": [
+      "经济学人",
+      "《经济学人》",
       "The Economist"
     ]
   },
@@ -1512,13 +1498,15 @@
   "国际足联": {
     "first_seen": "2025-12-06T18:02:00+00:00",
     "sources": [
-      "r7",
-      "infobae"
+      "yahoo!ニュース",
+      "infobae",
+      "r7"
     ],
     "original_forms": [
       "北大西洋公约组织",
-      "Otan",
       "国际足联",
+      "F1",
+      "Otan",
       "FIFA"
     ]
   },
@@ -3213,17 +3201,6 @@
       "Burnley"
     ]
   },
-  "卡雷曼斯": {
-    "first_seen": "2025-12-06T15:11:00+00:00",
-    "sources": [
-      "tve24.ru"
-    ],
-    "original_forms": [
-      "Елену",
-      "叶莲娜",
-      "卡雷曼斯"
-    ]
-  },
   "帝奥微电子股份有限公司": {
     "first_seen": "2025-12-06T13:33:37+00:00",
     "sources": [
@@ -3265,19 +3242,6 @@
       "立法會"
     ]
   },
-  "《经济学人》": {
-    "first_seen": "2025-11-17T09:30:03+00:00",
-    "sources": [
-      {
-        "id": "31d462cc2a8b2e386fb8ad2d2f52778e",
-        "name": "news.cnyes.com",
-        "url": "https://news.cnyes.com"
-      }
-    ],
-    "original_forms": [
-      "The Economist"
-    ]
-  },
   "交通部": {
     "first_seen": "2025-11-14T03:45:40+00:00",
     "sources": [
@@ -3290,13 +3254,11 @@
   "费加罗报": {
     "first_seen": "2025-11-07T11:03:40+00:00",
     "sources": [
-      {
-        "id": "ce220ee834949cc829facb394da9f7b7",
-        "name": "RFI",
-        "url": "https://www.rfi.fr"
-      }
+      "rfi"
     ],
     "original_forms": [
+      "《费加罗报》",
+      "费加罗报",
       "《費加羅報》"
     ]
   },
@@ -3572,12 +3534,16 @@
   "红牛": {
     "first_seen": "2025-12-07T14:30:00+00:00",
     "sources": [
+      "yahoo!ニュース",
+      "スポニチ sponichi annex",
       "nbc news",
-      "スポニチ sponichi annex"
+      "autosport web"
     ],
     "original_forms": [
+      "红牛",
+      "レッドブル",
       "Red Bull",
-      "レッドブル"
+      "红牛车队"
     ]
   },
   "马克斯·维斯塔潘": {
@@ -3597,8 +3563,11 @@
       "dw"
     ],
     "original_forms": [
+      "贝宁国家广播电视台",
+      "Benín",
       "Bénin",
-      "Benín"
+      "RTB",
+      "贝宁"
     ]
   },
   "Patrice Talon": {
@@ -3699,32 +3668,33 @@
   "中华人民共和国": {
     "first_seen": "2025-11-07T11:03:40+00:00",
     "sources": [
-      "bbc",
       "轉角國際udn global",
+      "the telegraph",
+      "china daily",
+      "大紀元",
+      "rfi",
       "dw",
       "央视网",
-      "china daily",
-      "news.cnyes.com",
-      "ludens.com.tw",
       "纽约时报中文网",
-      "rfi",
-      "大紀元",
-      "奇摩新聞",
       "qq news",
-      "the telegraph",
       "3dnews",
-      "gnews"
+      "gnews",
+      "ludens.com.tw",
+      "news.cnyes.com",
+      "bbc",
+      "奇摩新聞"
     ],
     "original_forms": [
       "中華人民共和國",
-      "Chinese",
-      "中國",
-      "Китая",
-      "中国",
       "中方",
       "China",
       "中共",
-      "中华人民共和国"
+      "中国・成都",
+      "Китая",
+      "Chinese",
+      "中华人民共和国",
+      "中国",
+      "中國"
     ]
   },
   "冲绳": {
@@ -3808,24 +3778,26 @@
   "俄罗斯": {
     "first_seen": "2025-12-03T21:53:13+00:00",
     "sources": [
+      "ura.ru",
+      "новини live",
       "українська правда",
+      "gnews",
       "korrespondent.net",
       "fakty.com.ua",
-      "новини live",
-      "ura.ru",
-      "gnews",
       "eadaily"
     ],
     "original_forms": [
+      "России",
       "Russia",
-      "росіяни",
       "РФ",
       "俄罗斯联邦",
-      "російські окупанти",
       "Російські війська",
+      "Росія",
+      "росіяни",
+      "Радбезу РФ",
+      "俄罗斯联邦安全会议",
       "俄罗斯",
-      "России",
-      "Росія"
+      "російські окупанти"
     ]
   },
   "英国《每日电讯报》": {
@@ -3894,37 +3866,39 @@
   "美利坚合众国": {
     "first_seen": "2025-11-13T04:51:00+00:00",
     "sources": [
-      "українська правда",
-      "o globo",
-      "r7",
-      "infobae",
-      "news.cnyes.com",
-      "abc news",
-      "tve24.ru",
-      "la croix",
-      "oregonlive.com",
       "європейська правда",
-      "the guardian",
       "ura.ru",
+      "infobae",
+      "o globo",
+      "the guardian",
       "franceinfo",
+      "24 канал",
+      "r7",
+      "tve24.ru",
+      "українська правда",
       "gnews",
+      "abc news",
       "clarin.com",
-      "24 канал"
+      "news.cnyes.com",
+      "la croix",
+      "oregonlive.com"
     ],
     "original_forms": [
-      "美國",
-      "Сполучених Штатів",
       "美国",
-      "US",
-      "U.S.",
-      "America",
-      "米国",
       "美利坚合众国",
-      "Estados Unidos",
-      "New York",
-      "США",
+      "US",
+      "米国",
+      "U.S.",
       "Republican senators",
-      "中美"
+      "中美",
+      "America",
+      "美国众议院",
+      "США",
+      "美国国会众议院",
+      "Сполучених Штатів",
+      "New York",
+      "美國",
+      "Estados Unidos"
     ]
   },
   "Владимир Зеленский": {
@@ -3987,17 +3961,11 @@
       "українська правда"
     ],
     "original_forms": [
+      "克里姆林宫",
       "Кремлі",
-      "Кремля"
-    ]
-  },
-  "俄罗斯联邦安全会议": {
-    "first_seen": "2025-12-07T17:19:00+00:00",
-    "sources": [
-      "українська правда"
-    ],
-    "original_forms": [
-      "Радбезу РФ"
+      "\"Россия 1\"",
+      "Кремля",
+      "俄罗斯-1"
     ]
   },
   "德米特里·佩斯科夫": {
@@ -4007,15 +3975,6 @@
     ],
     "original_forms": [
       "Дмитро Пєсков"
-    ]
-  },
-  "俄罗斯-1": {
-    "first_seen": "2025-12-07T17:19:00+00:00",
-    "sources": [
-      "українська правда"
-    ],
-    "original_forms": [
-      "\"Россия 1\""
     ]
   },
   "德米特里·梅德韦杰夫": {
@@ -4126,15 +4085,6 @@
       "Tanjong Pagar MRT station"
     ]
   },
-  "Lando Norris": {
-    "first_seen": "2025-12-07T14:35:00+00:00",
-    "sources": [
-      "cna"
-    ],
-    "original_forms": [
-      "Lando Norris"
-    ]
-  },
   "Max Verstappen": {
     "first_seen": "2025-12-07T14:35:00+00:00",
     "sources": [
@@ -4227,17 +4177,6 @@
       "角田裕毅"
     ]
   },
-  "红牛车队": {
-    "first_seen": "2025-12-07T14:31:04+00:00",
-    "sources": [
-      "autosport web",
-      "yahoo!ニュース"
-    ],
-    "original_forms": [
-      "Red Bull",
-      "レッドブル"
-    ]
-  },
   "阿布扎比酋长国": {
     "first_seen": "2025-12-07T14:32:00+00:00",
     "sources": [
@@ -4256,22 +4195,16 @@
       "アラブ首長国連邦"
     ]
   },
-  "F1": {
-    "first_seen": "2025-12-07T14:31:04+00:00",
-    "sources": [
-      "yahoo!ニュース"
-    ],
-    "original_forms": [
-      "F1"
-    ]
-  },
   "诺里斯": {
     "first_seen": "2025-12-07T14:31:04+00:00",
     "sources": [
-      "yahoo!ニュース"
+      "yahoo!ニュース",
+      "cna"
     ],
     "original_forms": [
-      "ノリス"
+      "ノリス",
+      "诺里斯",
+      "Lando Norris"
     ]
   },
   "皮亚斯特里": {
@@ -4281,16 +4214,6 @@
     ],
     "original_forms": [
       "ピアストリ"
-    ]
-  },
-  "NHK": {
-    "first_seen": "2025-12-04T05:35:50+00:00",
-    "sources": [
-      "crea web",
-      "gnews"
-    ],
-    "original_forms": [
-      "NHK"
     ]
   },
   "AKB48": {
@@ -4312,11 +4235,14 @@
     ]
   },
   "日本放送协会": {
-    "first_seen": "2025-12-07T11:10:36+00:00",
+    "first_seen": "2025-12-04T05:35:50+00:00",
     "sources": [
-      "ステラnet"
+      "gnews",
+      "ステラnet",
+      "crea web"
     ],
     "original_forms": [
+      "日本放送协会",
       "NHK"
     ]
   },
@@ -4512,15 +4438,6 @@
     ],
     "original_forms": [
       "Nicolás Maduro"
-    ]
-  },
-  "贝宁国家广播电视台": {
-    "first_seen": "2025-12-07T16:40:20+00:00",
-    "sources": [
-      "dw"
-    ],
-    "original_forms": [
-      "RTB"
     ]
   },
   "科托努": {
@@ -5158,13 +5075,14 @@
   "北京": {
     "first_seen": "2025-12-03T02:09:10+00:00",
     "sources": [
-      "franceinfo",
-      "gnews"
+      "gnews",
+      "franceinfo"
     ],
     "original_forms": [
-      "华盛顿哥伦比亚特区",
       "Washington",
-      "北京"
+      "北京",
+      "北京市",
+      "华盛顿哥伦比亚特区"
     ]
   },
   "Mijia Diffuse Reflection Ceiling Light": {
@@ -5348,16 +5266,6 @@
       "民主党"
     ]
   },
-  "美国众议院": {
-    "first_seen": "2025-12-04T15:57:03+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "美国众议院",
-      "美国国会众议院"
-    ]
-  },
   "汤姆·基恩": {
     "first_seen": "2025-12-04T15:57:03+00:00",
     "sources": [
@@ -5388,10 +5296,18 @@
   "马克龙": {
     "first_seen": "2025-12-04T00:00:00+00:00",
     "sources": [
+      "la política online",
+      "fakty.com.ua",
       "gnews"
     ],
     "original_forms": [
-      "马克龙"
+      "Macron",
+      "Еммануель Макрон",
+      "马克龙",
+      "埃马纽埃尔·马克龙",
+      "哈维尔·米莱",
+      "Milei",
+      "Эммануэль Макрон"
     ]
   },
   "北京首都国际机场": {
@@ -5507,15 +5423,6 @@
     ],
     "original_forms": [
       "财政部"
-    ]
-  },
-  "北京市": {
-    "first_seen": "2025-12-04T00:00:00+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "北京市"
     ]
   },
   "上海市": {
@@ -5845,15 +5752,6 @@
       "中国北方稀土集团高科技股份有限公司"
     ]
   },
-  "中华人民共和国政府": {
-    "first_seen": "2025-12-07T14:19:55+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "中华人民共和国政府"
-    ]
-  },
   "Mcslots": {
     "first_seen": "2025-12-07T16:00:00+00:00",
     "sources": [
@@ -5879,15 +5777,6 @@
     ],
     "original_forms": [
       "北爱尔兰"
-    ]
-  },
-  "中国人民解放军": {
-    "first_seen": "2025-12-07T09:23:31+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "中国人民解放军"
     ]
   },
   "日本自卫队": {
@@ -5989,15 +5878,6 @@
       "China Daily"
     ]
   },
-  "法兰西共和国": {
-    "first_seen": "2025-12-07T12:50:05+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "法兰西共和国"
-    ]
-  },
   "Emmanuel Macron": {
     "first_seen": "2025-12-07T11:48:30+00:00",
     "sources": [
@@ -6040,6 +5920,7 @@
       "gnews"
     ],
     "original_forms": [
+      "中华人民共和国政府",
       "中华人民共和国国防部"
     ]
   },
@@ -6077,7 +5958,8 @@
       "gnews"
     ],
     "original_forms": [
-      "自民党"
+      "自民党",
+      "日本自由民主党"
     ]
   },
   "微信": {
@@ -6141,15 +6023,6 @@
     ],
     "original_forms": [
       "ITTF混合団体ワールドカップ2025"
-    ]
-  },
-  "中国・成都": {
-    "first_seen": "2025-12-05T12:54:00+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "中国・成都"
     ]
   },
   "戸上隼輔": {
@@ -6332,15 +6205,6 @@
       "Donald Trump"
     ]
   },
-  "Reuters": {
-    "first_seen": "2025-12-07T17:26:31+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "Reuters"
-    ]
-  },
   "日本政府": {
     "first_seen": "2025-12-07T14:19:55+00:00",
     "sources": [
@@ -6351,15 +6215,6 @@
       "日本政府"
     ]
   },
-  "日本自由民主党": {
-    "first_seen": "2025-12-07T14:19:55+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "日本自由民主党"
-    ]
-  },
   "日本航空自卫队": {
     "first_seen": "2025-12-07T14:19:55+00:00",
     "sources": [
@@ -6367,15 +6222,6 @@
     ],
     "original_forms": [
       "日本航空自卫队"
-    ]
-  },
-  "中国人民解放军空军": {
-    "first_seen": "2025-12-07T14:19:55+00:00",
-    "sources": [
-      "gnews"
-    ],
-    "original_forms": [
-      "中国人民解放军空军"
     ]
   },
   "Les Echos": {
