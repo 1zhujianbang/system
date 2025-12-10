@@ -10,6 +10,7 @@ import time
 import threading
 from datetime import timezone
 from dotenv import dotenv_values
+from typing import Dict, Any  
 
 # 添加项目根目录到 path
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -987,13 +988,157 @@ def render_snapshots_tab():
         else:
             st.warning(f"{p.name} 尚未生成")
 
+
+def render_tool_explorer_tab():
+    st.header("Tool Explorer")
+    st.caption("自动发现所有注册工具 · 支持搜索、预览、复制、一键执行")
+
+    # 1. 自动加载所有真实工具（核心！）
+    all_tools = FunctionRegistry.get_all_tools()  # <-- 你的真实注册表
+    if not all_tools:
+        st.warning("未检测到已注册的工具，请检查 FunctionRegistry")
+        return
+
+    # 2. 可选：给工具打 tag 分组（推荐在函数上加 @tool 装饰器时顺便加 category）
+    #    如果你还没加，这里提供一个默认分组逻辑
+    CATEGORY_ORDER = {
+        "Data Fetch": ["fetch", "search", "scrape", "crawl"],
+        "Extraction": ["extract", "process", "parse", "llm"],
+        "Graph Ops": ["graph", "update", "refresh", "merge", "kg", "node", "edge"],
+        "Reporting": ["report", "markdown", "summary", "export"],
+        "Utility": ["save", "load", "tmp", "debug", "test"],
+    }
+
+    def get_category(tool_name: str) -> str:
+        name_lower = tool_name.lower()
+        for cat, keywords in CATEGORY_ORDER.items():
+            if any(k in name_lower for k in keywords):
+                return cat
+        return "Other"
+
+    # 添加分类
+    categorized = {}
+    for name, meta in all_tools.items():
+        cat = meta.get("category") or get_category(name)  # 支持手动 category
+        categorized.setdefault(cat, []).append((name, meta))
+
+    # 3. 搜索框
+    search = st.text_input("Search Tools", placeholder="输入工具名或描述关键词...", key="tool_search")
+    
+    # 过滤
+    if search:
+        filtered = {}
+        for cat, tools in categorized.items():
+            matched = []
+            for name, meta in tools:
+                if (search.lower() in name.lower() or 
+                    (meta.get("description") and search.lower() in meta.get("description", "").lower())):
+                    matched.append((name, meta))
+            if matched:
+                filtered[cat] = matched
+        categorized = filtered
+
+    # 4. 主渲染区 - 响应式卡片流
+    for category, tools in categorized.items():
+        with st.expander(f"**{category}** · {len(tools)} tools", expanded=True):
+            cols = st.columns(3, gap="medium")  # 每行3个卡片，可改成2或4
+            for idx, (tool_name, meta) in enumerate(tools):
+                with cols[idx % 3]:
+                    with st.container(border=True):
+                        st.markdown(f"**`{tool_name}`**")
+                        
+                        desc = meta.get("description") or "No description"
+                        st.caption(desc)
+
+                        # 参数表单（可编辑）
+                        params = meta.get("parameters", {})
+                        if params:
+                            with st.form(key=f"form_{tool_name}_{idx}", clear_on_submit=False, border=False):
+                                inputs = {}
+                                for p_name, p_info in params.items():
+                                    p_type = p_info.get("type", "str")
+                                    default = p_info.get("default")
+                                    desc = p_info.get("description", "")
+                                    
+                                    label = f"{p_name}{' *' if p_info.get('required') else ''}"
+                                    
+                                    if p_type == "bool":
+                                        val = st.checkbox(label, value=bool(default), help=desc)
+                                    elif p_type in ("int", "integer"):
+                                        val = st.number_input(label, value=int(default) if default is not None else 0, step=1, help=desc)
+                                    elif p_type == "float":
+                                        val = st.number_input(label, value=float(default) if default is not None else 0.0, step=0.1, help=desc)
+                                    elif p_type in ("list", "dict", "json"):
+                                        val_str = json.dumps(default, ensure_ascii=False) if default is not None else "[]"
+                                        val_input = st.text_area(label, value=val_str, height=80, help=desc + "\n支持 JSON 或 $变量引用")
+                                        if val_input.strip().startswith("$"):
+                                            inputs[p_name] = val_input.strip()
+                                        else:
+                                            try:
+                                                inputs[p_name] = json.loads(val_input) if val_input.strip() else None
+                                            except:
+                                                inputs[p_name] = val_input  # 允许字符串
+                                    else:
+                                        val = st.text_input(label, value=str(default) if default is not None else "", help=desc)
+                                        inputs[p_name] = val if val else None
+
+                                col_run, col_copy = st.columns([1, 2])
+                                with col_run:
+                                    run_now = st.form_submit_button("Run", type="primary", use_container_width=True)
+                                with col_copy:
+                                    copy_step = st.form_submit_button("Copy as Step", use_container_width=True)
+
+                                # 一键运行（调试神器！）
+                                if run_now:
+                                    with st.spinner(f"Running {tool_name}..."):
+                                        try:
+                                            context = PipelineContext()
+                                            engine = PipelineEngine(context)
+                                            result = asyncio.run(engine.run_task({
+                                                "id": f"debug_{tool_name}",
+                                                "tool": tool_name,
+                                                "inputs": inputs
+                                            }))
+                                            st.success("Success!")
+                                            st.json(result, expanded=False)
+                                        except Exception as e:
+                                            st.error(f"Failed: {e}")
+
+                                # 一键复制为 Pipeline Step
+                                if copy_step:
+                                    step_yaml = {
+                                        "id": tool_name,
+                                        "tool": tool_name,
+                                        "inputs": inputs,
+                                        "output": f"{tool_name}_result"
+                                    }
+                                    yaml_str = yaml.dump(step_yaml, sort_keys=False, allow_unicode=True)
+                                    st.code(yaml_str, language="yaml")
+                                    st.toast("已复制到剪贴板（模拟）", icon="clipboard")
+                                    # 真实复制到剪贴板（Streamlit 1.30+）
+                                    try:
+                                        st.code(yaml_str, language="yaml")
+                                        st.success("Step YAML 已生成，可直接粘贴到 Custom Builder")
+                                    except:
+                                        pass
+                        else:
+                            st.info("No parameters")
+
+                        # 底部标签
+                        tags = []
+                        if meta.get("async"): tags.append("async")
+                        if "llm" in tool_name.lower(): tags.append("LLM")
+                        if tags:
+                            st.caption(" · ".join(tags))
+
 # --- 主导航 ---
-tabs = st.tabs(["Configuration","Ingestion", "Expansion", "Maintenance", "Snapshots", "Custom Builder"])
+tabs = st.tabs(["Configuration","Ingestion", "Expansion", "Maintenance", "Snapshots", "Tools", "Custom Builder"])
 
 with tabs[0]: render_configuration_tab()
 with tabs[1]: render_ingestion_tab()
 with tabs[2]: render_expansion_tab()
 with tabs[3]: render_maintenance_tab()
 with tabs[4]: render_snapshots_tab()
-with tabs[5]: render_custom_builder()
+with tabs[5]: render_tool_explorer_tab()
+with tabs[6]: render_custom_builder()
 
