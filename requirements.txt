@@ -1,0 +1,37 @@
+# 最简核心依赖 - 仅包含必需的顶级包
+# 其他依赖会作为传递依赖自动安装
+
+# Web框架和UI
+streamlit
+
+# 数据处理
+pandas
+
+# 配置和环境
+pyyaml
+python-dotenv
+
+# 异步操作
+aiohttp
+aiofiles
+
+# 图处理
+networkx
+pyvis
+
+# AI/LLM
+openai
+
+# 数据验证
+pydantic
+
+# 安全
+cryptography
+
+# 系统工具
+watchdog
+psutil
+
+# 可视化
+altair
+
