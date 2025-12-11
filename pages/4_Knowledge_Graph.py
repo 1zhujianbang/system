@@ -14,7 +14,7 @@ sys.path.append(str(ROOT_DIR))
 
 from src.web import utils
 
-st.set_page_config(page_title="Knowledge Graph - Market Lens", page_icon="🕸️", layout="wide")
+st.set_page_config(page_title="新闻智能体系统 - 知识图谱", page_icon="🕸️", layout="wide")
 
 # --- 数据加载 ---
 data_root = Path(__file__).resolve().parent.parent / "data"
@@ -59,18 +59,16 @@ with st.sidebar:
     all_entities = list(entities.keys()) if mode == "事件-实体映射 (EA)" else list((kg_data.get("entities") or {}).keys())
     placeholder_label = "(All / Top Nodes - EA)" if mode == "事件-实体映射 (EA)" else "(All / Top Nodes - KG)"
     search_query = st.selectbox(
-        "Focus on Entity", 
+        "Focus on Entity",
         options=[placeholder_label] + sorted(all_entities),
         index=0,
         help="Select an entity to view its specific connections."
     )
     hop_depth = st.slider("Hop Depth (聚焦模式)", 1, 4, 1, help="从选定实体出发，最多拓展的边数（实体-事件-实体-...）。")
-    
     # 2. 显示设置
     max_nodes = st.slider("Max Nodes", 10, 3000, 500, help="Limit total nodes for better performance")
     physics_enabled = st.checkbox("Enable Physics", value=True)
     auto_timeline = st.checkbox("显示聚焦实体时间线", value=True, help="在下方时间线视图中自动使用当前聚焦实体（KG/EA 均可）")
-    
     # 时间线参数
     entity_opts = sorted(list(entities.keys()))
     default_tl = "(请选择)"
@@ -79,7 +77,6 @@ with st.sidebar:
     # 时间线实体直接复用当前聚焦实体（非 All/Top），否则为未选择
     timeline_entity = search_query if search_query not in [placeholder_label, "(All / Top Nodes)"] else "(请选择)"
     limit_events = st.slider("最多显示事件数", 10, 500, 200, 10)
-    
     st.divider()
     if mode == "事件-实体映射 (EA)":
         st.caption(f"Total Entities: {len(entities)}")
@@ -94,14 +91,14 @@ with st.sidebar:
 
 if mode == "事件-实体映射 (EA)":
     if not entities or not events:
-        st.warning("Knowledge Graph is empty. Run the pipeline to populate data.")
+        st.warning("知识图谱为空。请运行流水线来填充数据。")
         st.stop()
 else:
     # KG 模式优先用可视化快照
     if kg_vis_data:
         pass
     elif not kg_data or not kg_data.get("entities") or not kg_data.get("events"):
-        st.warning("Knowledge Graph (KG) is empty.")
+        st.warning("知识图谱(KG)为空。")
         st.stop()
 
 edge_list = []

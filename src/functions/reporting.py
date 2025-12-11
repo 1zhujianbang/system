@@ -1,49 +1,23 @@
 from typing import List, Dict, Any
 from ..core.registry import register_tool
+from ..core import DataNormalizer, StandardEventPipeline
 
 @register_tool(
     name="generate_markdown_report",
     description="根据事件列表生成 Markdown 格式的简报",
     category="Reporting"
 )
-def generate_markdown_report(events_list: Any, title: str = "Market Analysis Report") -> str:
+async def generate_markdown_report(events_list: Any, title: str = "Market Analysis Report") -> str:
     """
     生成 Markdown 报告
-    - 兼容输入为字符串/嵌套列表，尽可能解析成事件字典列表
+    - 使用标准事件数据管道进行数据处理
     """
-    def normalize(ev_input: Any) -> List[Dict[str, Any]]:
-        out: List[Dict[str, Any]] = []
-        if ev_input is None:
-            return out
-        items = ev_input if isinstance(ev_input, list) else [ev_input]
-        for it in items:
-            if isinstance(it, dict):
-                out.append(it)
-            elif isinstance(it, list):
-                for sub in it:
-                    if isinstance(sub, dict):
-                        out.append(sub)
-                    elif isinstance(sub, str):
-                        try:
-                            parsed = json.loads(sub)
-                            if isinstance(parsed, dict):
-                                out.append(parsed)
-                            elif isinstance(parsed, list):
-                                out.extend([p for p in parsed if isinstance(p, dict)])
-                        except Exception:
-                            continue
-            elif isinstance(it, str):
-                try:
-                    parsed = json.loads(it)
-                    if isinstance(parsed, dict):
-                        out.append(parsed)
-                    elif isinstance(parsed, list):
-                        out.extend([p for p in parsed if isinstance(p, dict)])
-                except Exception:
-                    continue
-        return out
+    # 使用标准事件数据管道
+    pipeline = StandardEventPipeline()
+    pipeline_result = await pipeline.execute(events_list)
 
-    events = normalize(events_list)
+    # 获取处理后的数据
+    events = pipeline_result.get("transformation", [])
     if not events:
         return f"# {title}\n\nNo events found."
         

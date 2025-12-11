@@ -2017,5 +2017,15 @@
       }
     ],
     "first_seen": "2025-12-04T00:00:00+00:00"
+  },
+  "事件1": {
+    "entities": [
+      "实体A"
+    ],
+    "event_summary": "摘要1",
+    "sources": [
+      "test_source"
+    ],
+    "first_seen": "2023-01-01"
   }
 }

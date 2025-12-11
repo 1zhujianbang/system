@@ -479,10 +479,4 @@ class GNewsCollector:
     
     def clear_cache(self):
         """清空缓存"""
-        pass 
-
-# 使用示例和测试
-
-if __name__ == "__main__":
-    pass
-    
+        pass

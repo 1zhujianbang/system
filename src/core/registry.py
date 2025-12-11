@@ -2,6 +2,7 @@ from typing import Callable, Dict, Any, Optional, List, Type
 import inspect
 from functools import wraps
 from pydantic import BaseModel, create_model, ValidationError
+from .logging import LoggerManager
 
 class FunctionRegistry:
     _registry: Dict[str, Dict[str, Any]] = {}
@@ -53,7 +54,7 @@ class FunctionRegistry:
                         model = create_model(f"{func_name}Input", **fields)
                     except Exception as e:
                         # 某些复杂类型可能无法自动生成 Model，降级处理
-                        print(f"Warning: Could not auto-generate Pydantic model for {func_name}: {e}")
+                        LoggerManager.get_logger(__name__).warning(f"Could not auto-generate Pydantic model for {func_name}: {e}")
                         model = None
                         
             except ValueError:

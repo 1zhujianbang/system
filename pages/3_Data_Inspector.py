@@ -10,7 +10,7 @@ sys.path.append(str(ROOT_DIR))
 
 from src.web import utils
 
-st.set_page_config(page_title="Data Inspector - Market Lens", page_icon="🕵️", layout="wide")
+st.set_page_config(page_title="新闻智能体系统 - 数据查看器", page_icon="🕵️", layout="wide")
 
 st.title("🕵️ Data Inspector")
 st.caption("Explore extracted entities, events, and raw news data.")
@@ -34,7 +34,6 @@ with tab_entities:
     col_filter, col_stat = st.columns([3, 1])
     with col_filter:
         entity_search = st.text_input("🔍 Search Entities", placeholder="e.g. Bitcoin, SEC...")
-    
     entities_data = utils.load_entities()
     
     if entities_data:
@@ -64,14 +63,13 @@ with tab_entities:
             }
         )
     else:
-        st.info("No entities data found.")
+        st.info("未找到实体数据。")
 
 # 2. 事件浏览
 with tab_events:
     col_evt_search, _ = st.columns([3, 1])
     with col_evt_search:
         event_search = st.text_input("🔍 Search Events", placeholder="e.g. ETF, Regulation...")
-
     events_data = utils.load_events()
     
     if events_data:
@@ -102,7 +100,7 @@ with tab_events:
             }
         )
     else:
-        st.info("No events data found.")
+        st.info("未找到事件数据。")
 
 # 3. 原始新闻 (Feed View)
 with tab_news:
@@ -116,7 +114,7 @@ with tab_news:
             files = sorted(files, key=lambda x: x.stat().st_mtime, reverse=True)
             selected_file = st.radio("Available Files", files, format_func=lambda x: x.name, label_visibility="collapsed")
         else:
-            st.warning("No files found.")
+            st.warning("未找到文件。")
             selected_file = None
 
     with c_view:
@@ -159,7 +157,7 @@ with tab_news:
                         st.markdown(f"**Content:**\n{content}")
                         st.json(item, expanded=False)
             else:
-                st.info("File is empty.")
+                st.info("文件为空。")
 
 # 4. 提取结果快照（只读 + 删除）
 with tab_tmp:
@@ -168,7 +166,7 @@ with tab_tmp:
     files = sorted(tmp_dir.glob("extracted_events_*.jsonl"), key=lambda x: x.stat().st_mtime, reverse=True)
     
     if not files:
-        st.info("No extracted snapshot files found.")
+        st.info("未找到提取的快照文件。")
     else:
         data = []
         for f in files:
@@ -183,7 +181,7 @@ with tab_tmp:
             })
         df_snap = pd.DataFrame(data)
         st.dataframe(df_snap, hide_index=True, use_container_width=True)
-        
+
         selected = st.selectbox("选择要删除的文件（仅删除 tmp 快照）", [""] + [f.name for f in files])
         if selected:
             if st.button("🗑️ 删除所选快照", type="primary"):

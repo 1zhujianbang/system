@@ -3553,5 +3553,23 @@
     "original_forms": [
       "国家卫生健康委"
     ]
+  },
+  "实体A": {
+    "first_seen": "2023-01-01",
+    "sources": [
+      "test_source"
+    ],
+    "original_forms": [
+      "Entity A"
+    ]
+  },
+  "实体B": {
+    "first_seen": "2023-01-01",
+    "sources": [
+      "test_source"
+    ],
+    "original_forms": [
+      "Entity B"
+    ]
   }
 }

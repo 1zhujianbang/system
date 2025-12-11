@@ -1,12 +1,11 @@
 # src/__init__.py
 """
-交易系统主包
+新闻智能体系统主包
 """
-from src import agents
-from src import analysis
-from src import config
-from src import data
-from src import models
-from src import utils
+from . import agents
+from . import data
+from . import functions
+from . import utils
+from . import core
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

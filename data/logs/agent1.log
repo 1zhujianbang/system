@@ -1610,3 +1610,368 @@
 [2025-12-09 23:47:23] [知识图谱] 数据保存完成
 [2025-12-09 23:47:23] [知识图谱] 实体和事件更新完成
 [2025-12-09 23:47:23] [知识图谱] 知识图谱刷新完成
+2025-12-10 16:12:18 [INFO] [test:18] 测试日志系统
+2025-12-10 16:21:32 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 16:21:32 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 16:22:12 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 16:22:12 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 16:24:29 [WARNING] [src.functions:48] Unexpected error importing graph_ops: invalid character '。' (U+3002) (graph_ops.py, line 242)
+2025-12-10 16:24:29 [WARNING] [src.functions:48] Unexpected error importing reporting: unterminated triple-quoted string literal (detected at line 42) (reporting.py, line 11)
+2025-12-10 16:24:29 [ERROR] [src.functions:53] Failed to import 2 modules: [('graph_ops', "invalid character '。' (U+3002) (graph_ops.py, line 242)"), ('reporting', 'unterminated triple-quoted string literal (detected at line 42) (reporting.py, line 11)')]
+2025-12-10 16:24:29 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 2 modules: [('graph_ops', "invalid character '。' (U+3002) (graph_ops.py, line 242)"), ('reporting', 'unterminated triple-quoted string literal (detected at line 42) (reporting.py, line 11)')]
+2025-12-10 16:25:02 [WARNING] [src.functions:48] Unexpected error importing graph_ops: invalid character '；' (U+FF1B) (graph_ops.py, line 243)
+2025-12-10 16:25:02 [ERROR] [src.functions:53] Failed to import 1 modules: [('graph_ops', "invalid character '；' (U+FF1B) (graph_ops.py, line 243)")]
+2025-12-10 16:25:02 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('graph_ops', "invalid character '；' (U+FF1B) (graph_ops.py, line 243)")]
+2025-12-10 16:25:21 [WARNING] [src.functions:48] Unexpected error importing graph_ops: invalid character '。' (U+3002) (graph_ops.py, line 243)
+2025-12-10 16:25:21 [ERROR] [src.functions:53] Failed to import 1 modules: [('graph_ops', "invalid character '。' (U+3002) (graph_ops.py, line 243)")]
+2025-12-10 16:25:21 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('graph_ops', "invalid character '。' (U+3002) (graph_ops.py, line 243)")]
+2025-12-10 16:25:37 [WARNING] [src.functions:48] Unexpected error importing graph_ops: unterminated triple-quoted string literal (detected at line 277) (graph_ops.py, line 244)
+2025-12-10 16:25:37 [ERROR] [src.functions:53] Failed to import 1 modules: [('graph_ops', 'unterminated triple-quoted string literal (detected at line 277) (graph_ops.py, line 244)')]
+2025-12-10 16:25:37 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('graph_ops', 'unterminated triple-quoted string literal (detected at line 277) (graph_ops.py, line 244)')]
+2025-12-10 16:26:30 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 16:26:30 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 16:27:37 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 16:27:37 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 16:27:52 [INFO] [test:29] 测试日志系统
+2025-12-10 16:27:53 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 16:27:53 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 16:27:53 [INFO] [src.core.imports:56] Successfully imported 1 modules
+2025-12-10 16:29:56 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 16:29:56 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 16:30:10 [WARNING] [src.core.serialization:59] 序列化失败，使用降级方案: Object of type lock is not JSON serializable
+2025-12-10 16:30:10 [WARNING] [src.core.serialization:59] 序列化失败，使用降级方案: Object of type lock is not JSON serializable
+2025-12-10 16:37:12 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 16:37:12 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 16:38:31 [INFO] [DataPipeline.event_pipeline:252] 开始执行数据管道: event_pipeline
+2025-12-10 16:38:31 [INFO] [DataPipeline.event_pipeline:279] 数据管道 event_pipeline 执行完成
+2025-12-10 16:38:33 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 16:38:33 [INFO] [src.functions:20] Functions package initialized successfully
+[2025-12-10 16:40:44] [知识图谱] 已加载 191 条实体合并规则
+2025-12-10 16:42:15 [INFO] [Agent.simple_task_agent:61] Agent simple_task_agent 初始化完成
+2025-12-10 16:42:15 [INFO] [Agent.simple_task_agent:95] Agent simple_task_agent 初始化成功
+2025-12-10 16:42:15 [INFO] [AgentManager:55] Agent simple_task_agent_test_instance 创建成功
+2025-12-10 16:42:15 [INFO] [Agent.simple_task_agent:128] 开始执行Agent simple_task_agent (第1次)
+2025-12-10 16:42:15 [INFO] [Agent.simple_task_agent:83] 执行任务: 验证任务, 预计耗时: 1秒
+2025-12-10 16:42:16 [INFO] [Agent.simple_task_agent:90] 任务 验证任务 执行完成
+2025-12-10 16:42:16 [INFO] [Agent.simple_task_agent:140] Agent simple_task_agent 执行完成
+2025-12-10 16:56:55 [INFO] [test:29] 测试日志系统
+2025-12-10 16:57:08 [INFO] [test:30] 测试日志系统
+2025-12-10 16:57:08 [INFO] [DataPipeline.event_pipeline:252] 开始执行数据管道: event_pipeline
+2025-12-10 16:57:08 [INFO] [DataPipeline.event_pipeline:279] 数据管道 event_pipeline 执行完成
+2025-12-10 16:57:21 [INFO] [test:30] 测试日志系统
+2025-12-10 16:57:21 [INFO] [DataPipeline.event_pipeline:252] 开始执行数据管道: event_pipeline
+2025-12-10 16:57:21 [INFO] [DataPipeline.event_pipeline:279] 数据管道 event_pipeline 执行完成
+2025-12-10 17:21:30 [ERROR] [src.core.exceptions:85] 业务异常 [CONFIG_ERROR]: 测试配置错误
+2025-12-10 17:53:27 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 17:53:31 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 17:53:31 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:09:52 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 18:09:56 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:09:56 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:10:13 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 18:10:17 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:10:17 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:13:00 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:13:00 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:13:05 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 18:13:09 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:13:09 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:16:39 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:16:39 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:20:00 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:20:00 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:22:27 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:22:27 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:23:05 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 18:23:08 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:23:08 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:24:28 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:24:28 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:47:30 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 18:47:33 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:47:33 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:49:11 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:49:11 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:53:53 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:53:53 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:55:00 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 18:55:04 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:55:04 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:56:22 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 18:56:25 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:56:25 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:56:45 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:56:45 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 18:59:27 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 18:59:27 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 19:00:30 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 19:00:34 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 19:00:34 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 19:56:12 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 19:56:12 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 19:57:16 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 19:57:16 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:10:06 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:10:06 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:13:45 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 20:13:48 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:13:48 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:39:29 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:39:29 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:44:41 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:44:41 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:45:24 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 20:45:28 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:45:28 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:47:23 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:47:23 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:51:32 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:51:32 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:53:58 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:53:58 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:57:49 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:57:49 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 20:59:25 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 20:59:25 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:05:04 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:05:04 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:13:34 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 21:13:38 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:13:38 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:14:32 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:14:32 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:19:42 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 21:19:45 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:19:45 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:20:20 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:20:20 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:21:11 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 21:21:14 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:21:14 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:21:42 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 21:21:45 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:21:45 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:32:08 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 21:32:12 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:32:12 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:32:12 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:32:12 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-10 21:34:00 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-10 21:34:03 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-10 21:34:03 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:33:58 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 11:34:02 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:34:02 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:34:11 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 11:34:14 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:34:14 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:34:29 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 11:34:33 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:34:33 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:43:42 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:43:42 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:51:02 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:51:02 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:51:58 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 11:52:01 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:52:01 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:52:12 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:52:12 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:54:52 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:54:52 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:58:12 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:58:12 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:58:30 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:58:30 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:58:43 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:58:43 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 11:59:06 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 11:59:06 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 12:47:05 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 12:47:05 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 12:56:47 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 12:56:47 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 13:27:39 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 13:27:43 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 13:27:43 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 13:27:43 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 13:27:57 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 13:28:00 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 13:28:00 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 13:28:00 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 13:28:54 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 13:28:57 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 13:28:57 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 13:28:57 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:36 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:52:36 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:36 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:50 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:52:50 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:50 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:52 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:52:52 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:52 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:53 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:52:53 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:53 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:54 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:52:54 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:54 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:56 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:52:56 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:56 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:57 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:52:57 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:52:57 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:42 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:53:42 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:42 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:44 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:53:44 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:44 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:44 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:53:44 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:44 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:45 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:53:45 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:45 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:47 [WARNING] [src.functions:48] Unexpected error importing extraction: name 'Any' is not defined
+2025-12-11 20:53:47 [ERROR] [src.functions:53] Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:53:47 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('extraction', "name 'Any' is not defined")]
+2025-12-11 20:57:29 [WARNING] [src.core.key_manager:67] No master key found, generating new one
+2025-12-11 20:57:29 [INFO] [src.core.key_manager:159] API key for llm_deepseek-chat-3 stored securely
+2025-12-11 20:57:29 [INFO] [src.core.key_manager:159] API key for llm_deepseek-chat-1 stored securely
+2025-12-11 20:57:29 [INFO] [src.core.key_manager:159] API key for llm_deepseek-chat-2 stored securely
+2025-12-11 20:57:29 [INFO] [src.core.key_manager:159] API key for llm_kimi-k2-turbo-preview stored securely
+2025-12-11 20:57:29 [INFO] [src.core.key_manager:159] API key for llm_aliyun-qwen stored securely
+2025-12-11 20:57:29 [INFO] [src.core.key_manager:159] API key for llm_aliyun-plus stored securely
+2025-12-11 20:57:29 [INFO] [src.core.key_manager:159] API key for llm_aliyun-qwen3-vl stored securely
+[2025-12-11 20:57:29] [LLM请求] ✅ 已迁移旧配置到安全存储
+[2025-12-11 20:57:30] [LLM请求] ✅ 已加载服务 deepseek-chat-3 (模型: deepseek-chat)
+[2025-12-11 20:57:31] [LLM请求] ✅ 已加载服务 deepseek-chat-1 (模型: deepseek-chat)
+[2025-12-11 20:57:32] [LLM请求] ✅ 已加载服务 deepseek-chat-2 (模型: deepseek-chat)
+[2025-12-11 20:57:33] [LLM请求] ✅ 已加载服务 kimi-k2-turbo-preview (模型: kimi-k2-turbo-preview)
+[2025-12-11 20:57:34] [LLM请求] ✅ 已加载服务 Aliyun-Qwen (模型: qwen3-max)
+[2025-12-11 20:57:34] [LLM请求] ✅ 已加载服务 Aliyun-plus (模型: qwen-plus)
+[2025-12-11 20:57:35] [LLM请求] ✅ 已加载服务 Aliyun-qwen3-vl (模型: qwen3-vl-235b-a22b-instruct)
+2025-12-11 20:57:35 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 20:57:35 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:21:05 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:21:07 [ERROR] [src.functions:44] Failed to import data_fetch: cannot import name 'LLMAPIPool' from 'src.core' (D:\System\src\core\__init__.py)
+2025-12-11 22:21:07 [ERROR] [src.functions:44] Failed to import extraction: cannot import name 'LLMAPIPool' from 'src.core' (D:\System\src\core\__init__.py)
+2025-12-11 22:21:07 [ERROR] [src.functions:44] Failed to import graph_ops: cannot import name 'LLMAPIPool' from 'src.core' (D:\System\src\core\__init__.py)
+2025-12-11 22:21:07 [ERROR] [src.functions:53] Failed to import 3 modules: [('data_fetch', "cannot import name 'LLMAPIPool' from 'src.core' (D:\\System\\src\\core\\__init__.py)"), ('extraction', "cannot import name 'LLMAPIPool' from 'src.core' (D:\\System\\src\\core\\__init__.py)"), ('graph_ops', "cannot import name 'LLMAPIPool' from 'src.core' (D:\\System\\src\\core\\__init__.py)")]
+2025-12-11 22:21:07 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 3 modules: [('data_fetch', "cannot import name 'LLMAPIPool' from 'src.core' (D:\\System\\src\\core\\__init__.py)"), ('extraction', "cannot import name 'LLMAPIPool' from 'src.core' (D:\\System\\src\\core\\__init__.py)"), ('graph_ops', "cannot import name 'LLMAPIPool' from 'src.core' (D:\\System\\src\\core\\__init__.py)")]
+2025-12-11 22:21:37 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:21:39 [ERROR] [src.functions:44] Failed to import data_fetch: cannot import name 'tools' from 'src.core' (D:\System\src\core\__init__.py)
+2025-12-11 22:21:39 [ERROR] [src.functions:44] Failed to import extraction: cannot import name 'tools' from 'src.core' (D:\System\src\core\__init__.py)
+2025-12-11 22:21:39 [ERROR] [src.functions:44] Failed to import graph_ops: cannot import name 'tools' from 'src.core' (D:\System\src\core\__init__.py)
+2025-12-11 22:21:39 [ERROR] [src.functions:53] Failed to import 3 modules: [('data_fetch', "cannot import name 'tools' from 'src.core' (D:\\System\\src\\core\\__init__.py)"), ('extraction', "cannot import name 'tools' from 'src.core' (D:\\System\\src\\core\\__init__.py)"), ('graph_ops', "cannot import name 'tools' from 'src.core' (D:\\System\\src\\core\\__init__.py)")]
+2025-12-11 22:21:39 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 3 modules: [('data_fetch', "cannot import name 'tools' from 'src.core' (D:\\System\\src\\core\\__init__.py)"), ('extraction', "cannot import name 'tools' from 'src.core' (D:\\System\\src\\core\\__init__.py)"), ('graph_ops', "cannot import name 'tools' from 'src.core' (D:\\System\\src\\core\\__init__.py)")]
+2025-12-11 22:22:10 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:22:12 [ERROR] [src.functions:44] Failed to import data_fetch: cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\System\src\utils\entity_updater.py)
+2025-12-11 22:22:12 [ERROR] [src.functions:44] Failed to import extraction: cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\System\src\utils\entity_updater.py)
+2025-12-11 22:22:12 [ERROR] [src.functions:44] Failed to import graph_ops: cannot import name 'refresh_graph' from partially initialized module 'src.functions.graph_ops' (most likely due to a circular import) (D:\System\src\functions\graph_ops.py)
+2025-12-11 22:22:12 [ERROR] [src.functions:53] Failed to import 3 modules: [('data_fetch', "cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\\System\\src\\utils\\entity_updater.py)"), ('extraction', "cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\\System\\src\\utils\\entity_updater.py)"), ('graph_ops', "cannot import name 'refresh_graph' from partially initialized module 'src.functions.graph_ops' (most likely due to a circular import) (D:\\System\\src\\functions\\graph_ops.py)")]
+2025-12-11 22:22:12 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 3 modules: [('data_fetch', "cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\\System\\src\\utils\\entity_updater.py)"), ('extraction', "cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\\System\\src\\utils\\entity_updater.py)"), ('graph_ops', "cannot import name 'refresh_graph' from partially initialized module 'src.functions.graph_ops' (most likely due to a circular import) (D:\\System\\src\\functions\\graph_ops.py)")]
+2025-12-11 22:22:49 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:22:51 [ERROR] [src.functions:44] Failed to import data_fetch: cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\System\src\utils\entity_updater.py)
+2025-12-11 22:22:51 [ERROR] [src.functions:44] Failed to import extraction: cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\System\src\utils\entity_updater.py)
+2025-12-11 22:22:51 [ERROR] [src.functions:44] Failed to import graph_ops: cannot import name 'KnowledgeGraph' from partially initialized module 'src.functions.graph_ops' (most likely due to a circular import) (D:\System\src\functions\graph_ops.py)
+2025-12-11 22:22:51 [ERROR] [src.functions:53] Failed to import 3 modules: [('data_fetch', "cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\\System\\src\\utils\\entity_updater.py)"), ('extraction', "cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\\System\\src\\utils\\entity_updater.py)"), ('graph_ops', "cannot import name 'KnowledgeGraph' from partially initialized module 'src.functions.graph_ops' (most likely due to a circular import) (D:\\System\\src\\functions\\graph_ops.py)")]
+2025-12-11 22:22:51 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 3 modules: [('data_fetch', "cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\\System\\src\\utils\\entity_updater.py)"), ('extraction', "cannot import name 'update_entities' from partially initialized module 'src.utils.entity_updater' (most likely due to a circular import) (D:\\System\\src\\utils\\entity_updater.py)"), ('graph_ops', "cannot import name 'KnowledgeGraph' from partially initialized module 'src.functions.graph_ops' (most likely due to a circular import) (D:\\System\\src\\functions\\graph_ops.py)")]
+2025-12-11 22:23:24 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:23:26 [WARNING] [src.functions:48] Unexpected error importing graph_ops: name 'Tuple' is not defined
+2025-12-11 22:23:26 [ERROR] [src.functions:53] Failed to import 1 modules: [('graph_ops', "name 'Tuple' is not defined")]
+2025-12-11 22:23:26 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 1 modules: [('graph_ops', "name 'Tuple' is not defined")]
+2025-12-11 22:23:46 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:23:49 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:23:49 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:23:55 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:23:58 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:23:58 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:24:05 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:24:07 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:24:07 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:24:14 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:24:16 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:24:16 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:28:26 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:28:28 [ERROR] [src.functions:44] Failed to import data_fetch: cannot import name 'persist_expanded_news_to_tmp' from partially initialized module 'src.functions.data_fetch' (most likely due to a circular import) (D:\System\src\functions\data_fetch.py)
+2025-12-11 22:28:28 [ERROR] [src.functions:44] Failed to import extraction: cannot import name 'llm_extract_events' from partially initialized module 'src.functions.extraction' (most likely due to a circular import) (D:\System\src\functions\extraction.py)
+2025-12-11 22:28:28 [ERROR] [src.functions:53] Failed to import 2 modules: [('data_fetch', "cannot import name 'persist_expanded_news_to_tmp' from partially initialized module 'src.functions.data_fetch' (most likely due to a circular import) (D:\\System\\src\\functions\\data_fetch.py)"), ('extraction', "cannot import name 'llm_extract_events' from partially initialized module 'src.functions.extraction' (most likely due to a circular import) (D:\\System\\src\\functions\\extraction.py)")]
+2025-12-11 22:28:28 [ERROR] [src.functions:22] Failed to initialize functions package: Failed to import 2 modules: [('data_fetch', "cannot import name 'persist_expanded_news_to_tmp' from partially initialized module 'src.functions.data_fetch' (most likely due to a circular import) (D:\\System\\src\\functions\\data_fetch.py)"), ('extraction', "cannot import name 'llm_extract_events' from partially initialized module 'src.functions.extraction' (most likely due to a circular import) (D:\\System\\src\\functions\\extraction.py)")]
+2025-12-11 22:29:28 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:29:30 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:29:30 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:29:37 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:29:39 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:29:39 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:29:51 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:29:53 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:29:53 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:39:12 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:39:14 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:39:14 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:39:21 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:39:23 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:39:23 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:39:30 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:39:32 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:39:32 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:39:56 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:39:58 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:39:58 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:47:26 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:47:28 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:47:28 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:47:35 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:47:37 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:47:37 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:48:00 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:48:02 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:48:02 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:48:56 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:48:58 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:48:58 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:49:48 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:49:50 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:49:50 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 22:51:16 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:51:18 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:51:18 [INFO] [src.functions:20] Functions package initialized successfully
+[2025-12-11 22:51:18] 实体库已更新，共 2 个实体
+[2025-12-11 22:51:18] 数据保存失败 C:\Users\25759\AppData\Local\Temp\tmpjde9jno5\entities_test.json: [WinError 183] 当文件已存在时，无法创建该文件。: 'C:\\Users\\25759\\AppData\\Local\\Temp\\tmpjde9jno5\\entities_test.tmp' -> 'C:\\Users\\25759\\AppData\\Local\\Temp\\tmpjde9jno5\\entities_test.json'
+2025-12-11 22:51:34 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:51:37 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:51:37 [INFO] [src.functions:20] Functions package initialized successfully
+[2025-12-11 22:51:37] 实体库已更新，共 2 个实体
+[2025-12-11 22:51:37] 实体库已更新，共 2 个实体
+2025-12-11 22:51:51 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 22:51:53 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 22:51:53 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 23:07:46 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 23:07:48 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 23:07:48 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 23:07:56 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 23:07:58 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 23:07:58 [INFO] [src.functions:20] Functions package initialized successfully
+2025-12-11 23:08:06 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 23:08:08 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 23:08:08 [INFO] [src.functions:20] Functions package initialized successfully
+[2025-12-11 23:13:35] 实体库已更新，共 365 个实体
+[2025-12-11 23:13:36] 事件映射已更新，共 160 个事件
+[2025-12-11 23:14:42] 实体库已更新，共 2 个实体
+[2025-12-11 23:15:01] 实体库已更新，共 2 个实体
+[2025-12-11 23:15:01] 事件映射已更新，共 1 个事件
+2025-12-11 23:16:08 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 23:16:11 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 23:16:11 [INFO] [src.functions:20] Functions package initialized successfully
+[2025-12-11 23:17:46] 实体库已更新，共 2 个实体
+[2025-12-11 23:17:46] 事件映射已更新，共 1 个事件
+[2025-12-11 23:18:02] 实体库已更新，共 2 个实体
+[2025-12-11 23:18:02] 事件映射已更新，共 1 个事件
+2025-12-11 23:18:19 [INFO] [numexpr.utils:164] NumExpr defaulting to 16 threads.
+2025-12-11 23:18:21 [INFO] [src.functions:56] Successfully imported 4 modules
+2025-12-11 23:18:21 [INFO] [src.functions:20] Functions package initialized successfully

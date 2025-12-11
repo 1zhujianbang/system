@@ -1,0 +1,17 @@
+# Agent3 配置 - 知识图谱压缩和管理
+agent3_config:
+  entity_batch_size: 80
+  event_batch_size: 15
+  event_bucket_days: 7
+  event_bucket_entity_overlap: 2
+  event_bucket_max_size: 40
+  event_precluster_similarity: 0.92
+  event_precluster_limit: 300
+  entity_precluster_similarity: 0.93
+  entity_precluster_limit: 500
+  max_summary_chars: 360
+  entity_max_workers: 7
+  event_max_workers: 7
+  rate_limit_per_sec: 6.0
+  entity_evidence_per_entity: 2
+  entity_evidence_max_chars: 400

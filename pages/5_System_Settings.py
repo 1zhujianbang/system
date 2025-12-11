@@ -7,24 +7,16 @@ import yaml
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR))
 
-CONFIG_PATH = ROOT_DIR / "config" / "config.yaml"
+from src.core import get_config_manager
 
-
-def load_config() -> dict:
-    if CONFIG_PATH.exists():
-        try:
-            return yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")) or {}
-        except Exception as e:
-            st.error(f"读取配置失败: {e}")
-            return {}
-    return {}
-
-
-st.set_page_config(page_title="System Settings", page_icon="⚙️", layout="wide")
+st.set_page_config(page_title="新闻智能体系统 - 系统设置", page_icon="⚙️", layout="wide")
 st.title("⚙️ 系统设置")
-st.caption("编辑 Agent 并发/限速等核心参数（写入 config/config.yaml）")
+st.caption("编辑 Agent 并发/限速等核心参数（写入 config/agents/*.yaml）")
 
-cfg = load_config()
+# 使用新的配置管理器
+config_manager = get_config_manager()
+cfg = config_manager.load_multi_file_config()
+
 agent1 = cfg.get("agent1_config", {}) or {}
 agent2 = cfg.get("agent2_config", {}) or {}
 agent3 = cfg.get("agent3_config", {}) or {}
@@ -191,8 +183,65 @@ with st.form("system_settings"):
                 "entity_evidence_per_entity": int(g3_ev_per_entity),
                 "entity_evidence_max_chars": int(g3_ev_max_chars),
             }
-            CONFIG_PATH.write_text(yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False), encoding="utf-8")
-            st.success("配置已保存到 config/config.yaml")
+            # 保存到多文件配置系统
+            config_dir = ROOT_DIR / "config" / "agents"
+
+            # 保存agent1配置
+            agent1_config = cfg.get("agent1_config", {})
+            agent1_config.update({
+                "max_workers": int(a1_workers),
+                "rate_limit_per_sec": float(a1_qps),
+                "dedupe_threshold": int(a1_dedupe)
+            })
+
+            # 保存agent2配置
+            agent2_config = cfg.get("agent2_config", {})
+            agent2_config.update({
+                "max_workers": int(a2_workers),
+                "rate_limit_per_sec": float(a2_qps)
+            })
+
+            # 保存agent3配置
+            agent3_config = cfg.get("agent3_config", {})
+            agent3_config.update({
+                "entity_batch_size": int(g3_ent_batch),
+                "event_batch_size": int(g3_ev_batch),
+                "event_bucket_days": int(g3_bucket_days),
+                "event_bucket_entity_overlap": int(g3_bucket_overlap),
+                "event_bucket_max_size": int(g3_bucket_max),
+                "event_precluster_similarity": float(g3_ev_sim),
+                "event_precluster_limit": int(g3_ev_limit),
+                "entity_precluster_similarity": float(g3_ent_sim),
+                "entity_precluster_limit": int(g3_ent_limit),
+                "max_summary_chars": int(g3_max_summary),
+                "entity_max_workers": int(g3_e_workers),
+                "event_max_workers": int(g3_ev_workers),
+                "rate_limit_per_sec": float(g3_rate),
+                "entity_evidence_per_entity": int(g3_ev_per_entity),
+                "entity_evidence_max_chars": int(g3_ev_max_chars)
+            })
+
+            # 写入各个配置文件
+            agent1_file = config_dir / "agent1.yaml"
+            agent2_file = config_dir / "agent2.yaml"
+            agent3_file = config_dir / "agent3.yaml"
+
+            agent1_file.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(agent1_file, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(agent1_config, f, allow_unicode=True, sort_keys=False)
+
+            with open(agent2_file, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(agent2_config, f, allow_unicode=True, sort_keys=False)
+
+            with open(agent3_file, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(agent3_config, f, allow_unicode=True, sort_keys=False)
+
+            # 清除配置缓存以强制重新加载
+            config_manager._config_cache.clear()
+            config_manager._cache_timestamps.clear()
+
+            st.success("配置已保存到 config/agents/*.yaml 文件")
         except Exception as e:
             st.error(f"保存失败: {e}")
 

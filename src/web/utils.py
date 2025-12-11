@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from pathlib import Path
 from src.web.config import ENTITIES_FILE, EVENTS_FILE, DATA_DIR
-from src.data.api_client import get_apis_config
+# API配置现在通过ConfigManager获取
 
 # 模板存储目录
 TEMPLATES_DIR = DATA_DIR / "config" / "templates"
@@ -87,10 +87,13 @@ def load_pipeline_templates():
 
 def get_default_api_sources_df():
     """
-    返回默认的 API 源配置 DataFrame (直接从后端配置加载)
+    返回默认的 API 源配置 DataFrame (使用默认配置)
     """
     try:
-        data = get_apis_config()
+        from src.core import ConfigManager
+        config_manager = ConfigManager()
+        apis_config = config_manager.get_config_value("llm_apis", "[]", "agent1_config")
+        data = json.loads(apis_config) if apis_config else []
     except Exception as e:
         # Fallback if backend config fails
         data = []

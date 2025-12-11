@@ -5,6 +5,7 @@ from typing import Optional, Any, List, Dict
 
 from dotenv import load_dotenv
 from .news_collector import GNewsCollector
+from ..core.singleton import SingletonBase
 
 def get_apis_config(config_path: Path = None) -> List[dict]:
     """
@@ -25,27 +26,18 @@ def get_apis_config(config_path: Path = None) -> List[dict]:
         {"name": "GNews-ar", "language": "es", "country": "ar", "timeout": 30, "enabled": True, "type": "gnews"}
     ]
 
-class DataAPIPool:
-    _instance = None
+class DataAPIPool(SingletonBase):
     _collectors = {}
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __init__(self):
-        if hasattr(self, '_initialized') and self._initialized:
-            return
-        self._initialized = True
-
+    def _init_singleton(self) -> None:
+        """单例初始化"""
         # 加载环境变量（主要用于获取API密钥）
         PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
         dotenv_path = PROJECT_ROOT / "config" / ".env.local"
         load_dotenv(dotenv_path)
 
-        self.configs = []
-        self.api_key_pool = []  # API密钥池
+        self.configs: List[Dict[str, Any]] = []
+        self.api_key_pool: List[str] = []  # API密钥池
         self._load_configs()
         # 调试：打印已加载的数据源配置
         print(f"[数据获取][DataAPIPool] 已加载数据源配置: {[c.get('name') for c in self.configs]}")

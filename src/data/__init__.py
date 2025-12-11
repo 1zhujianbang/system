@@ -1,1 +1,2 @@
-from src.data.data_collector import MarketClient
+# 数据模块初始化
+# 当前主要包含新闻收集器和API客户端

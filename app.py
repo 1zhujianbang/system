@@ -8,30 +8,40 @@ sys.path.append(str(ROOT_DIR))
 
 # 设置页面配置
 st.set_page_config(
-    page_title="Market Lens - 市场透镜",
-    page_icon="🔍",
+    page_title="新闻智能体系统 - News Intelligence Agent",
+    page_icon="📰",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("Market Lens - 市场透镜")
+st.title("📰 新闻智能体系统")
 st.markdown("""
-### 欢迎使用智能市场感知与决策系统
+### 基于大语言模型和知识图谱的智能新闻处理与分析系统
 
-请在左侧侧边栏选择功能模块：
+本系统通过多智能体协作实现从"新闻→实体→事件→知识图谱"的自动化处理流程。
 
-- **Dashboard**: 系统概览与状态监控
-- **Pipeline Builder**: 构建和运行数据处理流水线
-- **Data Inspector**: 浏览和检查采集的数据
-- **Knowledge Graph**: 市场知识图谱可视化
+#### 🎯 核心功能
+- **智能新闻处理**: 自动提取实体和事件，构建知识图谱
+- **多源数据接入**: 支持GNews等多渠道新闻源
+- **实时可视化**: 知识图谱和处理结果的Web界面展示
+- **并发处理**: 基于AsyncExecutor的高效异步处理架构
+
+#### 🚀 智能体流水线
+```
+新闻源 → Agent1(提取) → Agent2(扩展) → Agent3(图谱构建)
+    ↓         ↓            ↓            ↓
+多源API   实体/事件提取  相关新闻搜索   知识图谱压缩
+```
+
+请选择左侧的功能模块开始使用。
 """)
 
 st.sidebar.success("请在上方选择页面")
 
 st.sidebar.info(
     """
-    **Market Lens v0.2**
-    
-    智能市场感知与决策系统
+    **新闻智能体系统 v2.0**
+
+    基于LLM + 知识图谱的智能新闻分析系统
     """
 )

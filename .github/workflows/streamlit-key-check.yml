@@ -1,0 +1,57 @@
+name: Streamlit Key Check
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'pages/**'
+      - 'src/web/**'
+      - 'scripts/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'pages/**'
+      - 'src/web/**'
+      - 'scripts/**'
+
+jobs:
+  key-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Streamlit Key Check
+      run: python scripts/check_streamlit_keys.py pages/ src/
+
+    - name: Run Key Manager Tests
+      run: python -m pytest tests/test_streamlit_key_manager.py -v
+
+    - name: Comment on PR (if check fails)
+      if: failure() && github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '🚨 **Streamlit Key 检查失败**\n\n' +
+                  '检测到重复的key或缺少key的交互元素。\n\n' +
+                  '请运行以下命令修复：\n' +
+                  '```bash\n' +
+                  'python scripts/fix_streamlit_keys.py pages/\n' +
+                  '```\n\n' +
+                  '或查看 [UI开发规范](STREAMLIT_UI_GUIDELINES.md) 获取详细信息。'
+          })

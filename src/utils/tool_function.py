@@ -8,16 +8,10 @@ from typing import Set
 from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
+# from ..core import ConfigManager  # 延迟导入以避免循环依赖
+from ..core.singleton import SingletonBase
 
-class tools:
-    # 单例模式实现
-    _instance = None
-    _initialized = False
-    
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+class tools(SingletonBase):
     
     # ======================
     # 路径与配置（类变量，可通过类直接访问）
@@ -42,12 +36,25 @@ class tools:
     STOP_WORDS_FILE = DATA_DIR / "stop_words.txt"
     KNOWLEDGE_GRAPH_FILE = DATA_DIR / "knowledge_graph.json"
     
-    # 配置常量（类变量）
-    DEDUPE_THRESHOLD = int(os.getenv("AGENT1_DEDUPE_THRESHOLD", "3"))
+    # 配置常量（类变量）- 延迟初始化
+    _dedupe_threshold = None
+
+    @classmethod
+    def get_dedupe_threshold(cls):
+        """动态获取去重阈值配置"""
+        if cls._dedupe_threshold is None:
+            try:
+                # 延迟导入以避免循环依赖
+                from ..core import ConfigManager
+                config_manager = ConfigManager()
+                cls._dedupe_threshold = config_manager.get_config_value("dedupe_threshold", 3, "agent1_config")
+            except Exception:
+                # 降级到环境变量或默认值
+                cls._dedupe_threshold = int(os.getenv("AGENT1_DEDUPE_THRESHOLD", "3"))
+        return cls._dedupe_threshold
     
-    def __init__(self):
-        if self._initialized:
-            return
+    def _init_singleton(self) -> None:
+        """单例初始化"""
         # 确保目录存在（仅使用 tmp 路径存放新闻）
         for d in [self.DATA_DIR, self.DATA_TMP_DIR, self.RAW_NEWS_TMP_DIR, self.DEDUPED_NEWS_TMP_DIR, self.DATA_DIR / "logs"]:
             d.mkdir(parents=True, exist_ok=True)
@@ -63,7 +70,6 @@ class tools:
         self.STOP_WORDS = stop_words
         # 初始化刷新锁
         self._refresh_lock = threading.Lock()
-        self._initialized = True
 
     # ======================
     # 工具函数

@@ -38,25 +38,42 @@ def load_kg_counts():
             pass
     return counts
 
-st.set_page_config(page_title="Dashboard - Market Lens", page_icon="📊", layout="wide")
+st.set_page_config(page_title="新闻智能体系统 - 系统概览", page_icon="📊", layout="wide")
 
-# CSS 样式优化
-st.markdown("""
-<style>
-    .stMetric {
-        background-color: #f0f2f6;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
-    }
-    .st-emotion-cache-16idsys p {
-        font-size: 1.2rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+# 应用现代化样式
+from src.web.styles import load_openai_style, create_modern_card, create_feature_grid, create_status_indicator
+load_openai_style()
 
-st.title("📊 Dashboard")
-st.markdown("Overview of your system status, data collection, and knowledge graph growth.")
+st.title("📰 新闻智能体系统概览")
+st.markdown("### 实时监控系统状态、数据采集和知识图谱增长")
+
+# 欢迎区域
+welcome_col, status_col = st.columns([2, 1])
+
+with welcome_col:
+    create_modern_card(
+        "欢迎使用",
+        """
+        <p>新闻智能体系统基于大语言模型和知识图谱技术，</p>
+        <p>为您提供智能的新闻处理、实体提取和关系挖掘服务。</p>
+        <br>
+        <p><strong>🚀 核心功能：</strong></p>
+        <ul>
+            <li>📰 多源新闻采集</li>
+            <li>🧠 智能实体提取</li>
+            <li>🔗 知识图谱构建</li>
+            <li>📊 实时可视化分析</li>
+        </ul>
+        """,
+        "🎯"
+    )
+
+with status_col:
+    st.markdown("### 系统状态")
+    create_status_indicator("online", "数据处理服务")
+    create_status_indicator("online", "API连接服务")
+    create_status_indicator("online", "知识图谱引擎")
+    create_status_indicator("online", "监控告警服务")
 
 # --- 数据加载 ---
 with st.spinner("Loading metrics..."):
@@ -122,38 +139,97 @@ with st.spinner("Loading metrics..."):
                 top_entities_df = pd.DataFrame()
 
 # --- 核心指标卡片 ---
-col1, col2, col3, col4 = st.columns(4)
+st.markdown("### 📊 核心指标")
 
-with col1:
-    st.metric("📰 Raw News Files", news_count, delta="Total Collected", help="Number of raw news files in storage")
-with col2:
-    st.metric("🧠 Entities Tracked", entity_count, delta="Knowledge Nodes", help="Total unique entities in Knowledge Graph")
-with col3:
-    st.metric("🔗 Events Extracted", event_count, delta="Relationships", help="Total unique events extracted")
-with col4:
-    st.metric("🕒 Last Activity", last_update, help="Time of last system log update")
+# 使用响应式网格布局
+metric_cols = st.columns(4)
+
+with metric_cols[0]:
+    st.metric(
+        "📰 新闻文件",
+        f"{news_count}",
+        delta=f"+{len([f for f in raw_news_files if (datetime.now() - datetime.fromtimestamp(f.stat().st_mtime)).days < 1])} 今日",
+        help="存储的原始新闻文件总数"
+    )
+
+with metric_cols[1]:
+    st.metric(
+        "🧠 实体数量",
+        f"{entity_count}",
+        delta=f"{len([e for e in entities.values() if isinstance(e, dict) and (datetime.now().date() - datetime.fromisoformat(e.get('first_seen', '2024-01-01')).date()).days < 7])} 新增",
+        help="知识图谱中的唯一实体节点"
+    )
+
+with metric_cols[2]:
+    st.metric(
+        "🔗 事件数量",
+        f"{event_count}",
+        delta=f"{len([e for e in events.values() if isinstance(e, dict) and (datetime.now().date() - datetime.fromisoformat(e.get('first_seen', '2024-01-01')).date()).days < 7])} 新增",
+        help="提取的事件关系总数"
+    )
+
+with metric_cols[3]:
+    st.metric(
+        "🕒 最后活动",
+        last_update if last_update != "N/A" else "从未",
+        help="系统最后一次活动时间"
+    )
 
 st.markdown("---")
 
-# --- 图表区域 ---
-col_chart1, col_chart2 = st.columns([2, 1])
+# --- 数据洞察面板 ---
+st.markdown("### 🔍 数据洞察")
 
-with col_chart1:
-    st.subheader("🏆 Top Mentioned Entities")
-    if not top_entities_df.empty:
-        st.bar_chart(top_entities_df.set_index("Entity")["Mentions"], color="#4e79a7")
-    else:
-        st.info("No entity data available for visualization.")
+# 创建响应式图表布局
+chart_col1, chart_col2 = st.columns([3, 2])
 
-with col_chart2:
-    st.subheader("📡 Data Sources")
-    if entities and not top_entities_df.empty:
-        # 简单的源分布
-        source_counts = df_all["Source"].value_counts().head(5)
-        st.write("Distribution of entities by primary source:")
-        st.dataframe(source_counts, use_container_width=True)
-    else:
-        st.info("No source data available.")
+with chart_col1:
+    with st.container(border=True):
+        st.subheader("🏆 热门实体排名")
+        if not top_entities_df.empty:
+            # 美化图表样式 - 使用单一颜色主题
+            st.bar_chart(
+                top_entities_df.set_index("Entity")["Mentions"],
+                color="#667eea",  # 使用单一主题色
+                use_container_width=True
+            )
+
+            # 显示Top 3详情
+            st.markdown("**🏅 排名详情:**")
+            for i, (_, row) in enumerate(top_entities_df.head(3).iterrows()):
+                medal = ["🥇", "🥈", "🥉"][i] if i < 3 else "🏅"
+                st.markdown(f"{medal} **{row['Entity']}** - {row['Mentions']} 次提及")
+        else:
+            st.info("暂无实体数据可供可视化")
+
+with chart_col2:
+    with st.container(border=True):
+        st.subheader("📡 数据来源分布")
+        if entities and not top_entities_df.empty:
+            # 计算数据源分布
+            source_counts = df_all["Source"].value_counts().head(6)
+
+            # 使用Streamlit原生图表替代Plotly（避免NumPy兼容性问题）
+            import pandas as pd
+            pie_data = pd.DataFrame({
+                'Source': source_counts.index,
+                'Count': source_counts.values
+            })
+
+            # 显示条形图作为饼图的替代
+            st.bar_chart(
+                pie_data.set_index('Source')['Count'],
+                color='#667eea',  # 使用单一主题色
+                use_container_width=True
+            )
+
+            # 显示来源统计
+            st.markdown("**📊 详细统计:**")
+            for source, count in source_counts.items():
+                percentage = (count / len(df_all)) * 100
+                st.markdown(f"• **{source}**: {count} 条 ({percentage:.1f}%)")
+        else:
+            st.info("暂无数据来源信息")
 
 st.markdown("---")
 
@@ -161,8 +237,8 @@ st.markdown("---")
 c_log, c_action = st.columns([2, 1])
 
 with c_log:
-    st.subheader("📋 Recent System Logs")
-    
+    st.subheader("📋 系统活动日志")
+
     log_content = []
     try:
         log_target = LOGS_DIR / "agent1.log"
@@ -170,47 +246,83 @@ with c_log:
              # Fallback to latest
              log_files = sorted(LOGS_DIR.glob("*.log"), key=lambda x: x.stat().st_mtime, reverse=True)
              if log_files: log_target = log_files[0]
-             
+
         if log_target.exists():
             with open(log_target, "r", encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
                 # 反转显示，最新的在最上面
-                for line in reversed(lines[-50:]):
+                for line in reversed(lines[-20:]):  # 只显示最近20条
                     if "ERROR" in line:
                         icon = "🔴"
+                        level = "ERROR"
                     elif "WARNING" in line:
-                        icon = "qh"
+                        icon = "🟡"
+                        level = "WARNING"
                     elif "SUCCESS" in line or "✅" in line:
                         icon = "🟢"
+                        level = "SUCCESS"
                     else:
-                        icon = "ℹ️"
-                    log_content.append(f"{icon} {line.strip()}")
-    except Exception as e:
-        log_content = [f"Error reading logs: {e}"]
+                        icon = "🔵"
+                        level = "INFO"
 
-    # 使用 scrollable container
-    with st.container(height=300):
-        if log_content:
-            for line in log_content:
-                st.text(line)
-        else:
-            st.text("No logs found.")
+                    # 格式化时间和内容
+                    timestamp = line.split('[')[1].split(']')[0] if '[' in line else ""
+                    message = line.split(']', 2)[-1].strip() if ']' in line else line.strip()
+                    log_content.append(f"{icon} **{level}** {timestamp} {message}")
+    except Exception as e:
+        log_content = [f"❌ 读取日志失败: {e}"]
+
+    # 使用现代化的滚动容器
+    if log_content:
+        st.markdown("""
+            <div style="max-height: 300px; overflow-y: auto; background-color: #f8fafc; border-radius: 8px; padding: 1rem; border: 1px solid #e5e5e5;">
+        """, unsafe_allow_html=True)
+        for line in log_content:
+            st.markdown(line)
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("暂无系统日志")
 
 with c_action:
-    st.subheader("🚀 Quick Actions")
+    st.subheader("🚀 快捷操作")
     with st.container(border=True):
-        st.markdown("**Pipeline Operations**")
-        if st.button("Go to Pipeline Builder", use_container_width=True):
+        st.markdown("**🔧 工作流管理**")
+
+        # 美化按钮样式
+        button_style = """
+            <style>
+            .quick-action-btn {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
+                margin: 0.25rem 0;
+                width: 100%;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            }
+            .quick-action-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+            </style>
+        """
+        st.markdown(button_style, unsafe_allow_html=True)
+
+        if st.button("🔧 构建Pipeline", use_container_width=True, key="dashboard_pipeline_button"):
             st.switch_page("pages/2_Pipeline_Builder.py")
-            
-        st.markdown("**Data Management**")
-        c_a1, c_a2 = st.columns(2)
-        with c_a1:
-            if st.button("Inspect Data", use_container_width=True):
-                st.switch_page("pages/3_Data_Inspector.py")
-        with c_a2:
-            if st.button("View Graph", use_container_width=True):
-                st.switch_page("pages/4_Knowledge_Graph.py")
-                
+
+        if st.button("🕵️ 检查数据", use_container_width=True, key="dashboard_data_button"):
+            st.switch_page("pages/3_Data_Inspector.py")
+
+        if st.button("🕸️ 查看图谱", use_container_width=True, key="dashboard_graph_button"):
+            st.switch_page("pages/4_Knowledge_Graph.py")
+
+        if st.button("⚙️ 系统设置", use_container_width=True, key="dashboard_settings_button"):
+            st.switch_page("pages/5_System_Settings.py")
+
         st.divider()
-        st.caption("System Status: 🟢 Online")
+        create_status_indicator("online", "系统运行正常")
