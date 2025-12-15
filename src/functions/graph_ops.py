@@ -943,7 +943,7 @@ class KnowledgeGraph:
                 local_dupes.extend(pre_clusters)
 
             if len(bucket_keys) <= 1:
-                tools.log(f"[知识图谱] 跳过事件桶 {idx+1}/{len(buckets)}（仅1条，无需去重）")
+                # tools.log(f"[知识图谱] 跳过事件桶 {idx+1}/{len(buckets)}（仅1条，无需去重）")
                 return local_dupes
 
             # LLM批处理

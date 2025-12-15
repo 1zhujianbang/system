@@ -93,7 +93,11 @@ def llm_extract_events(title: str, content: str, api_pool: LLMAPIPool, max_retri
         return []
 
     # 使用工具函数创建提示
-    entity_definitions = """✅ 必须满足以下任一条件：
+    entity_definitions = """
+必要条件：
+- 是构成该事件必要的实体，若该实体在事件中缺失则可能导致事件不完备的实体
+
+✅ 必须满足以下任一条件：
 - 自然人（如 Elon Musk、Cathie Wood、Warren Buffett）
 - 注册公司（如 Apple Inc.、Goldman Sachs、中国工商银行、Volkswagen AG）
 - 政府机构或部门（如 美国证券交易委员会、中国人民银行、欧盟委员会、日本金融厅）

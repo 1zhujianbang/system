@@ -161,21 +161,48 @@ def _expand_keywords(keywords: List[str]) -> List[List[str]]:
 
 def _build_boolean_query(groups: List[List[str]]) -> str:
     """
-    根据分组构造 (A1 OR A2) AND (B1 OR B2) 形式的查询。
+    构建gnews.io API查询
+    规则：
+    1. 每个分组内的词用OR连接
+    2. 不同分组之间用AND连接  
     """
-    clauses = []
-    for g in groups:
-        ors = []
-        for term in g:
-            t = str(term).strip()
-            if not t:
-                continue
-            # 去除内部引号，外层加引号保证短语/特殊字符安全
-            t = t.replace('"', "")
-            ors.append(f'"{t}"')
-        if ors:
-            clauses.append("(" + " OR ".join(ors) + ")")
-    return " AND ".join(clauses)
+    if not groups:
+        return ""
+    
+    query_parts = []
+    
+    for group in groups:
+        if not group:
+            continue
+            
+        # 清理组内的词
+        valid_terms = []
+        for term in group:
+            if isinstance(term, str):
+                term = term.strip()
+                if term:
+                    valid_terms.append(term)
+        
+        if not valid_terms:
+            continue
+            
+        # 处理单个词
+        if len(valid_terms) == 1:
+            term = valid_terms[0]
+            query_parts.append(f'"{term}"')
+        # 处理多个词
+        else:
+            or_terms = []
+            for term in valid_terms:
+                or_terms.append(f'"{term}"')
+            query_parts.append(f"{' OR '.join(or_terms)}")
+    
+    if not query_parts:
+        return ""
+    
+    base_query = " AND ".join(query_parts)
+    return base_query
+
 
 
 @register_tool(
@@ -186,7 +213,7 @@ def _build_boolean_query(groups: List[List[str]]) -> str:
 async def search_news_by_keywords(
     keywords: List[str],
     apis: Optional[List[str]] = None,
-    limit: int = 50,
+    limit: int = 10,
     category: Optional[str] = None,
     from_: Optional[str] = None,
     to: Optional[str] = None,

@@ -121,30 +121,28 @@ def render() -> None:
 
     # --- 快速运行（研究/分析默认路径：增量更新优先） ---
     st.divider()
-    main_col = st.columns([1, 6, 6, 8, 1])
-
+    quick_mode = st.radio(
+        "运行模式",
+        ["增量更新（默认）", "初始化构建（高级）","仅抓取","仅抓取并提取"],
+        index=0,
+        horizontal=True,
+        help="增量更新=只追加新内容到已有图谱；初始化构建=允许全量更新（谨慎）。",
+    )
+    st.divider()
+    main_col = st.columns([1, 6, 8, 1])
     if not if_advanced_console:
         # Ensure these are always defined (avoid UnboundLocalError in non-keyword mode)
         keywords: list[str] = []
         with main_col[1]:
-            quick_mode = st.radio(
-                "运行模式",
-                ["增量更新（默认）", "初始化构建（高级）"],
-                index=0,
-                horizontal=False,
-                help="增量更新=只追加新内容到已有图谱；初始化构建=允许全量更新（谨慎）。",
-            )
-
-        with main_col[2]:
             fetch_mode = st.radio(
                 "抓取方式",
                 ["最新（按源抓取）", "关键词搜索（推荐）"],
-                index=1,
+                index=0,
                 horizontal=True,
                 help="关键词搜索会自动把关键词按实体同义词扩展成布尔查询（A OR A2）AND（B OR B2）。",
             )
 
-        with main_col[3]:
+        with main_col[2]:
             time_mode = st.radio(
                 "时间范围",
                 ["最近24h", "最近7d", "自定义区间"],
@@ -185,8 +183,9 @@ def render() -> None:
                 days = 1 if time_mode == "最近24h" else 7
                 from_dt = (now_utc - timedelta(days=days)).date().isoformat()
                 to_dt = now_utc.date().isoformat()
-                from_val, to_val = from_dt, to_dt
-                st.caption(f"抓取时间范围：{from_val} → {to_val}（按新闻发布时间）")
+                from_val = f"{from_dt}T00:00:00.000Z"
+                to_val = f"{to_dt}T23:59:59.999Z"
+                st.caption(f"抓取时间范围：{from_dt} 00:00 → {to_dt} 23:59（UTC时间）")
             else:
                 d_from, d_to = st.date_input(
                     "自定义日期区间",
@@ -194,10 +193,12 @@ def render() -> None:
                     help="//",
                 )
                 try:
-                    from_val = d_from.isoformat()
-                    to_val = d_to.isoformat()
+                    from_val = f"{d_from.isoformat()}T00:00:00.000Z"
+                    to_val = f"{d_to.isoformat()}T23:59:59.999Z"
+                    st.caption(f"抓取时间范围：{d_from} 00:00 → {d_to} 23:59（UTC时间）")
                 except Exception:
                     from_val, to_val = None, None
+            
 
         if not selected_sources:
             st.warning("未选择数据源：请进入“高级控制台 → Configuration → Source Configuration”勾选 enabled。")
@@ -244,8 +245,22 @@ def render() -> None:
                     },
                     "output": "raw_news_data",
                 }
+            if quick_mode.startswith("仅抓取并提取"):
+                pipeline_def = {
+                    "name": "Quick Fetch and Extract",
+                    "steps": [
+                        step_fetch,
+                        {
+                            "id": "process_news",
+                            "tool": "batch_process_news",
+                            "inputs": {"news_list": "$raw_news_data"},
+                            "output": "extracted_events",
+                        },
+                    ],
+                }
+                execute_pipeline(pipeline_def)
 
-            if quick_mode.startswith("增量"):
+            elif quick_mode.startswith("增量更新（默认）"):
                 pipeline_def = {
                     "name": "Quick Incremental Update",
                     "steps": [
@@ -278,7 +293,7 @@ def render() -> None:
                         }
                     )
                 execute_pipeline(pipeline_def)
-            else:
+            elif quick_mode.startswith("初始化构建（高级）"):
                 pipeline_def = {
                     "name": "Quick Initialization Build",
                     "steps": [
