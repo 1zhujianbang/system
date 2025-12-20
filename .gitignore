@@ -8,4 +8,7 @@ __pycache__/
 .env.local
 *.log
 *.txt
+*.html
+*.json
+*.jsonl
 !requirements.txt

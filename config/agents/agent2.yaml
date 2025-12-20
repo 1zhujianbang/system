@@ -1,4 +1,4 @@
 # Agent2 配置 - 实体扩展新闻搜索
 agent2_config:
-  max_workers: 7
-  rate_limit_per_sec: 20.0
+  max_workers: 60
+  rate_limit_per_sec: 300.0

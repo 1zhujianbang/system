@@ -35,6 +35,7 @@ async def fetch_news_stream(
     sortby: Optional[str] = None,
     in_fields: Optional[str] = None,
     page: Optional[int] = None,
+    daily_incremental: bool = False,  # 新增参数：是否按天递增请求
 ) -> List[Dict[str, Any]]:
     """
     获取全渠道新闻数据。
@@ -42,12 +43,13 @@ async def fetch_news_stream(
     Args:
         limit: 每个源获取的最大条数
         sources: 指定源列表 (如 ["GNews-cn"]), 默认为所有可用源
+        daily_incremental: 是否按天递增请求数据（从from_开始，每天请求一次，直到to_）
 
     Returns:
         新闻列表 (List[Dict])
     """
     tools = Tools()
-    tools.log(f"[fetch_news_stream] 开始执行，请求源: {sources}, limit: {limit}")
+    tools.log(f"[fetch_news_stream] 开始执行，请求源: {sources}, limit: {limit}, daily_incremental: {daily_incremental}")
     
     # 配置驱动的并发上限（使用统一配置管理器）
     config_manager = get_config_manager()
@@ -72,23 +74,101 @@ async def fetch_news_stream(
         tools.log("Warning: No valid sources to fetch from. API密钥可能未配置。")
         return []
 
-    # 使用公共函数获取数据
-    return await fetch_from_multiple_sources(
-        api_pool=api_pool,
-        source_names=target_sources,
-        concurrency_limit=concurrency,
-        query=query,
-        category=category,
-        limit=limit,
-        from_=from_,
-        to=to,
-        nullable=nullable,
-        truncate=truncate,
-        sortby=sortby,
-        in_fields=in_fields,
-        page=page,
-    )
-
+    # 如果启用了按天递增请求，并且提供了from_和to_参数
+    if daily_incremental and from_ and to:
+        tools.log(f"[fetch_news_stream] 启用按天递增请求: 从 {from_} 到 {to}")
+        all_news = []
+        
+        # 定义所有可用的类别
+        categories = ["general", "world", "nation", "business", "technology", "entertainment", "sports", "science", "health"]
+        
+        # 解析日期
+        try:
+            from_date = datetime.fromisoformat(from_.replace("Z", "+00:00")).date()
+            to_date = datetime.fromisoformat(to.replace("Z", "+00:00")).date()
+            
+            # 按天递增请求数据
+            current_date = from_date
+            while current_date <= to_date:
+                # 构造当天的日期范围
+                day_start = f"{current_date.isoformat()}T00:00:00.000Z"
+                day_end = f"{current_date.isoformat()}T23:59:59.999Z"
+                
+                tools.log(f"[fetch_news_stream] 请求 {current_date.isoformat()} 的数据")
+                
+                # 为每个类别获取数据
+                day_news = []
+                for cat in categories:
+                    tools.log(f"[fetch_news_stream] 请求 {current_date.isoformat()} 的 {cat} 类别数据")
+                    cat_news = await fetch_from_multiple_sources(
+                        api_pool=api_pool,
+                        source_names=target_sources,
+                        concurrency_limit=concurrency,
+                        query=query,
+                        category=cat,
+                        limit=limit,
+                        from_=day_start,
+                        to=day_end,
+                        nullable=nullable,
+                        truncate=truncate,
+                        sortby=sortby,
+                        in_fields=in_fields,
+                        page=page,
+                    )
+                    day_news.extend(cat_news)
+                    tools.log(f"[fetch_news_stream] {current_date.isoformat()} 的 {cat} 类别获取到 {len(cat_news)} 条数据")
+                
+                all_news.extend(day_news)
+                tools.log(f"[fetch_news_stream] {current_date.isoformat()} 总共获取到 {len(day_news)} 条数据")
+                
+                # 移动到下一天
+                current_date = current_date + timedelta(days=1)                
+        except Exception as e:
+            tools.log(f"[fetch_news_stream] 按天递增请求出错: {e}")
+            # 如果出错，回退到原来的实现
+            return await fetch_from_multiple_sources(
+                api_pool=api_pool,
+                source_names=target_sources,
+                concurrency_limit=concurrency,
+                query=query,
+                category=category,
+                limit=limit,
+                from_=from_,
+                to=to,
+                nullable=nullable,
+                truncate=truncate,
+                sortby=sortby,
+                in_fields=in_fields,
+                page=page,
+            )
+            
+        tools.log(f"[fetch_news_stream] 按天递增请求完成，总共获取到 {len(all_news)} 条数据")
+        return all_news
+    else:
+        # 如果指定了类别，则只使用该类别；否则遍历所有类别
+        categories = ["general", "world", "nation", "business", "technology", "entertainment", "sports", "science", "health"]
+        
+        # 为每个类别获取数据并合并
+        all_news = []
+        for cat in categories:
+            cat_news = await fetch_from_multiple_sources(
+                api_pool=api_pool,
+                source_names=target_sources,
+                concurrency_limit=concurrency,
+                query=query,
+                category=cat,
+                limit=limit,
+                from_=from_,
+                to=to,
+                nullable=nullable,
+                truncate=truncate,
+                sortby=sortby,
+                in_fields=in_fields,
+                page=page,
+            )
+            all_news.extend(cat_news)
+        
+        return all_news
 
 def _load_entity_equivs() -> Dict[str, Set[str]]:
     """

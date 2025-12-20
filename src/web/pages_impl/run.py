@@ -21,8 +21,8 @@ def render() -> None:
     # 获取任务管理器
     task_manager = get_global_pipeline_runner()
     
-    st.title("📰 新闻处理流程")
-    st.caption("一键运行：抓取新闻 → 提取实体/事件 → 更新知识图谱")
+    st.info("📰 新闻处理流程 ：一键运行：抓取新闻 → 提取实体/事件 → 更新知识图谱")
+    if_thirty_days = st.checkbox("三十天",value=False)
     
     # --- 任务状态监控 ---
     render_task_monitor(task_manager)
@@ -91,11 +91,12 @@ def render() -> None:
 
     # 构建默认的增量更新 Pipeline
     now_utc = datetime.now(timezone.utc)
-    from_dt = (now_utc - timedelta(days=1)).date().isoformat()
+    days = 30 if if_thirty_days else 1
+    
+    from_dt = (now_utc - timedelta(days=days)).date().isoformat()
     to_dt = now_utc.date().isoformat()
     from_val = f"{from_dt}T00:00:00.000Z"
     to_val = f"{to_dt}T23:59:59.999Z"
-    
     # 获取可用的新闻源
     selected_sources = []
     df_sources = st.session_state.get("ingestion_apis")
@@ -107,13 +108,13 @@ def render() -> None:
         st.session_state.ingestion_apis = utils.get_default_api_sources_df()
         df_sources = st.session_state.ingestion_apis
         selected_sources = df_sources[df_sources["enabled"] == True]["name"].tolist()
-    
+
     # 显示数据源信息
     st.info(f"📡 数据源: {', '.join(selected_sources[:3])}{'...' if len(selected_sources) > 3 else ''} ({len(selected_sources)} 个)")
     
     # 运行按钮
     run_disabled = task_manager.is_running or (not selected_sources)
-    
+
     if st.button("🚀 开始运行", type="primary", use_container_width=True, disabled=run_disabled):
         pipeline_def = {
             "name": "Incremental Update",
@@ -126,6 +127,7 @@ def render() -> None:
                         "sources": selected_sources,
                         "from_": from_val,
                         "to": to_val,
+                        "daily_incremental": True,  # 启用按天递增请求
                     },
                     "output": "raw_news_data",
                 },

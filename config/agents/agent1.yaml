@@ -1,5 +1,5 @@
 # Agent1 配置 - 新闻处理和实体提取
 agent1_config:
-  max_workers: 7
-  rate_limit_per_sec: 20.0
+  max_workers: 60
+  rate_limit_per_sec: 300.0
   dedupe_threshold: 4

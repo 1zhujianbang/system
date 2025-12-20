@@ -6,7 +6,7 @@
 
 import logging
 from typing import Dict, List, Any, Optional
-
+from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
@@ -74,11 +74,27 @@ async def fetch_from_collector(
     try:
         # 构建 FetchConfig
         keywords = query.split() if query else None
+        # 将字符串格式的日期转换为 datetime 对象
+        from_date = None
+        to_date = None
+        if from_:
+            try:
+                from_date = datetime.fromisoformat(from_.replace("Z", "+00:00"))
+            except Exception:
+                pass
+        if to:
+            try:
+                to_date = datetime.fromisoformat(to.replace("Z", "+00:00"))
+            except Exception:
+                pass
+                
         config = FetchConfig(
             max_items=limit,
             keywords=keywords,
             category=category,
             language=None,  # 使用 collector 默认语言
+            from_date=from_date,
+            to_date=to_date,
         )
         logger.info(f"构建 FetchConfig 完成: {config}")
         

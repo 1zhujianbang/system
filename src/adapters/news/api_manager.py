@@ -74,6 +74,15 @@ class GNewsAdapter(NewsSource):
             if config.category:
                 params["category"] = config.category
 
+            # 处理日期范围参数
+            if config.from_date:
+                # 转换为 GNews API 所需的 ISO 8601 格式
+                params["from"] = config.from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+            
+            if config.to_date:
+                # 转换为 GNews API 所需的 ISO 8601 格式
+                params["to"] = config.to_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+
             # 使用 ThreadedResolver 避免 Windows 上 aiodns 的兼容性问题
             # 显式禁用 aiodns，使用默认的 ThreadedResolver
             try:
@@ -85,6 +94,7 @@ class GNewsAdapter(NewsSource):
             timeout = aiohttp.ClientTimeout(total=self._timeout)
             async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
                 url = f"{self.BASE_URL}top-headlines"
+                    
                 async with session.get(url, params=params) as response:
                     if response.status != 200:
                         text = await response.text()
@@ -118,7 +128,6 @@ class GNewsAdapter(NewsSource):
                 error=str(e),
                 fetch_time=datetime.now(timezone.utc)
             )
-
     async def fetch_stream(self, config: Optional[FetchConfig] = None) -> AsyncIterator[NewsItem]:
         """流式抓取新闻"""
         result = await self.fetch(config)

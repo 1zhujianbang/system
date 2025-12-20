@@ -231,7 +231,7 @@ class EntityEventGraphRenderer(GraphRenderer):
             )
             
             # 显示设置
-            max_nodes = st.slider("最大节点数", 50, 500, 200, 50)
+            max_nodes = st.slider("最大节点数", 200, 10000, 200, 200)
             
             st.divider()
             
