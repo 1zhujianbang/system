@@ -18,6 +18,9 @@ from ...ports.extraction import (
 )
 from ...infra import get_logger
 
+# 导入GDELT适配器
+from .gdelt_adapter import GDELTAdapter
+
 
 class GNewsAdapter(NewsSource):
     """GNews 新闻源适配器"""
@@ -293,6 +296,10 @@ class NewsAPIManager(NewsSourcePool):
                     name=cfg["name"]
                 )
                 self.register(source)
+        
+        # 注册GDELT数据源
+        gdelt_source = GDELTAdapter(name="GDELT")
+        self.register(gdelt_source)
 
     def get_collector(self, name: str) -> Optional[Any]:
         """兼容旧 API：获取收集器（支持动态创建）"""

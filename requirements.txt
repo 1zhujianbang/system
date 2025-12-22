@@ -35,6 +35,17 @@ psutil
 # 可视化
 altair
 
+# 图数据库
+neo4j
+
+# 分布式任务处理
+celery
+redis
+
+# 因果推断
+causal-learn
+dowhy
+
 # 文本相似度算法（可选，提升实体合并准确度）
 # 如果不安装，会降级到标准库的 difflib.SequenceMatcher
 jellyfish  # Jaro-Winkler、Levenshtein 等高级字符串相似度算法
