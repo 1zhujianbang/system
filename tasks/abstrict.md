@@ -1,6 +1,6 @@
 ### 达到最先进 MarketLens 项目的综合计划叙述
 
-MarketLens 项目作为一个开源的智能新闻处理与知识图谱系统，已具备坚实基础，包括多源新闻接入、LLM 驱动的实体抽取、事件关联和动态图谱构建。然而，要将其提升到最先进水平——即构建一个全面的“图景仪”系统，能够从海量新闻数据中提取事实、推理动态演化和进行反事实模拟——需要一个系统性、阶段化的升级计划。该计划以 GDELT 项目（Global Database of Events, Language, and Tone）作为核心新闻源，利用其每日数百万条全球事件记录，实现从基础知识图谱到复杂宏观图谱的构建。GDELT 的 [masterfilelist.txt](http://data.gdeltproject.org/gdeltv2/masterfilelist.txt) 提供结构化事件数据（如事件 ID、演员、时间、地点和关系），天然适合图谱构建，避免从零解析非结构化文本。
+MarketLens 项目作为一个开源的智能新闻处理与知识图谱系统，已具备坚实基础，包括多源新闻接入、LLM 驱动的实体抽取、事件关联和动态图谱构建。然而，要将其提升到最先进水平——即构建一个全面的“图景仪”系统，能够从海量新闻数据中提取事实、推理动态演化和进行反事实模拟——需要一个系统性、阶段化的升级计划。该计划以 GDELT 项目（Global Database of Events, Language, and Tone）作为核心新闻源，利用其每日数百万条全球事件记录，实现从基础知识图谱到复杂宏观图谱的构建。GDELT python库 提供结构化事件数据（如事件 ID、演员、时间、地点和关系），天然适合图谱构建，避免从零解析非结构化文本。
 
 这个计划分为四个主要阶段：准备与基础构建、核心升级与集成、先进功能拓展，以及部署与优化。整个过程强调可扩展性、实时性和可解释性，参考行业前沿实践如 GraphRAG、因果推理算法和动态仿真模型。预计资源需求包括计算基础设施（云服务器）、LLM API（如 OpenAI 或开源模型如 Llama）和开发团队。
 
@@ -8,9 +8,9 @@ MarketLens 项目作为一个开源的智能新闻处理与知识图谱系统，
 
 首先，建立坚实的数据基础和架构迁移，确保项目兼容最先进工具。
 
-- **数据源整合**：以 GDELT 作为首要新闻源，取代原有 GNews API。下载 masterfilelist.txt，解析每日/历史 .export.CSV.zip 文件，这些文件包含 tab-separated 事件数据（61 列，如 GLOBALEVENTID、Actor1/2Name、EventCode、SQLDATE 和 ActionGeo）。使用 Python 库如 pandas 和 Dask 处理大规模数据（每日数万事件），标准化实体（去重 ActorName）、提取角色（Actor1 为施事者，Actor2 为受事者）和时间戳。补充 GKG 文件增强主题/情感分析。 为实时更新，集成 Apache Kafka 流处理管道，实现增量摄入而非批量重建。
+- **数据源混合**：以 GDELT 作为新闻源之一，混合原有 GNews API。导入GDRLT库,获取事件数据（如 GLOBALEVENTID、Actor1/2Name、EventCode、SQLDATE 和 ActionGeo）。使用 Python 库如 pandas 和 Dask 处理大规模数据（每日数万事件），标准化实体（去重 ActorName）、提取角色（Actor1 为施事者，Actor2 为受事者）和时间戳。补充 GKG 文件增强主题/情感分析。 为实时更新，集成 Apache Kafka 流处理管道，实现增量摄入而非批量重建。
 
-- **存储迁移**：从 SQLite 迁移到 Neo4j 或 FalkorDB 等原生图数据库，支持亿级节点和高效遍历（查询时间 <500ms）。导出当前数据到 CSV，使用 Neo4j 的 APOC 库导入。定义本体（Ontology）使用 OWL 框架，明确实体类型（如人物、组织）、事件模式（如 CAMEO 代码）和关系（如“参与”“影响”）。这奠定基础图谱的核心模式：(实体, 角色, 事件) 和 (头实体, 关系, 尾实体)。
+- **存储混合**：增加 Neo4j 或 FalkorDB 等原生图数据库，支持亿级节点和高效遍历（查询时间 <500ms）。导出当前数据到 CSV，使用 Neo4j 的 APOC 库导入。定义本体（Ontology）使用 OWL 框架，明确实体类型（如人物、组织）、事件模式（如 CAMEO 代码）和关系（如“参与”“影响”）。这奠定基础图谱的核心模式：(实体, 角色, 事件) 和 (头实体, 关系, 尾实体)。
 
 - **LLM 增强**：升级 LLM 集成，使用 Agentic GraphRAG 框架自动化实体抽取和关系推理。引入开源模型如 Llama 3 以降低成本，支持多模态输入（文本+图像新闻）。添加偏见检测机制（如差分隐私）确保数据质量。
 

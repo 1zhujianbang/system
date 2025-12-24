@@ -8,9 +8,7 @@
 ### 1. 数据源整合
 
 #### 1.1 GDELT 数据接入模块开发
-  - 下载并解析 [masterfilelist.txt](http://data.gdeltproject.org/gdeltv2/masterfilelist.txt)
-  - 开发 GDELT 数据下载器，支持增量更新机制
-  - 实现 .export.CSV.zip 文件解析功能
+  - 利用GDELT库函数实现
   - 处理 61 列结构化事件数据（GLOBALEVENTID、Actor1/2Name、EventCode、SQLDATE 等）
 
 #### 1.2 数据处理流水线
