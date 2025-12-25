@@ -54,5 +54,11 @@ jellyfish  # Jaro-Winkler、Levenshtein 等高级字符串相似度算法
 # 注意：sentence-transformers 模型较大（~500MB），首次加载需下载
 # sentence-transformers  # 取消注释以启用语义匹配
 
+# GDELT数据获取库
+gdelt
+
+# 分布式数据处理
+dask[dataframe]
+
 pytest
 

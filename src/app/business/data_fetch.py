@@ -1,5 +1,20 @@
-from typing import List, Dict, Any, Optional, Set
+from __future__ import annotations
+
+import asyncio
+import json
+import time
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import List, Dict, Any, Optional, Set, Union
+
 import pandas as pd
+try:
+    import dask.dataframe as dd
+    from dask.distributed import Client, as_completed
+    DASK_AVAILABLE = True
+except ImportError:
+    DASK_AVAILABLE = False
+
 from ...infra.registry import register_tool
 from ...infra.paths import tools as Tools
 from ...core import ConfigManager, AsyncExecutor, RateLimiter, get_config_manager, get_llm_pool
@@ -8,14 +23,558 @@ from ...adapters.news.fetch_utils import fetch_from_multiple_sources, normalize_
 from .extraction import llm_extract_events, NewsDeduplicator, persist_expanded_news_to_tmp
 from ...infra.file_utils import safe_unlink_multiple, safe_unlink
 from ...domain.data_operations import sanitize_datetime_fields, write_jsonl_file
-from pathlib import Path
-import json
-import asyncio
-import time
-from datetime import datetime, timedelta, timezone
+from ...ports.extraction import NewsItem, FetchConfig
+from ...adapters.news.gdelt_adapter import GDELTAdapter
 
 # 导入新闻API管理器
 from ...core import NewsAPIManager
+
+
+class GDELTDataProcessor:
+    """GDELT数据处理器"""
+    
+    def __init__(self, use_dask: bool = True):
+        self._use_dask = use_dask and DASK_AVAILABLE
+        self._gdelt_adapter = GDELTAdapter()
+        
+    async def process_gdelt_data(
+        self, 
+        config: FetchConfig,
+        normalize_entities: bool = True,
+        extract_roles: bool = True,
+        format_timestamps: bool = True
+    ) -> pd.DataFrame:
+        """
+        处理GDELT数据的主方法
+        
+        Args:
+            config: 获取配置
+            normalize_entities: 是否标准化实体
+            extract_roles: 是否提取角色
+            format_timestamps: 是否格式化时间戳
+            
+        Returns:
+            处理后的DataFrame
+        """
+        # 获取原始数据
+        raw_data = await self._gdelt_adapter.fetch(config)
+        
+        if not raw_data.items:
+            print("No GDELT data found for the given criteria")
+            return pd.DataFrame()
+        
+        # 将NewsItem转换为DataFrame
+        df = self._news_items_to_dataframe(raw_data.items)
+        
+        # 数据预处理
+        df = self._preprocess_data(df)
+        
+        # 实体标准化
+        if normalize_entities:
+            df = self._normalize_entities(df)
+        
+        # 角色提取
+        if extract_roles:
+            df = self._extract_roles(df)
+        
+        # 时间戳处理
+        if format_timestamps:
+            df = self._format_timestamps(df)
+        
+        return df
+    
+    def _news_items_to_dataframe(self, news_items: List[NewsItem]) -> pd.DataFrame:
+        """将NewsItem列表转换为DataFrame"""
+        if not news_items:
+            return pd.DataFrame()
+        
+        # 提取raw_data中的信息
+        records = []
+        for item in news_items:
+            if item.raw_data:
+                record = item.raw_data.copy()
+                record['id'] = item.id
+                record['title'] = item.title
+                record['content'] = item.content
+                record['source_name'] = item.source_name
+                record['source_url'] = item.source_url
+                record['published_at'] = item.published_at
+                record['author'] = item.author
+                record['category'] = item.category
+                record['language'] = item.language
+                records.append(record)
+        
+        if records:
+            df = pd.DataFrame(records)
+            return df
+        else:
+            return pd.DataFrame()
+    
+    def _preprocess_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """预处理数据"""
+        if df.empty:
+            return df
+        
+        # 清理空值
+        df = df.fillna('')
+        
+        # 确保关键列存在
+        required_columns = [
+            'Actor1Name', 'Actor2Name', 'EventCode', 'SQLDATE',
+            'GLOBALEVENTID', 'SOURCEURL', 'ActionGeo_FullName'
+        ]
+        
+        for col in required_columns:
+            if col not in df.columns:
+                df[col] = ''
+        
+        # 去除重复行
+        df = df.drop_duplicates(subset=['GLOBALEVENTID'], keep='first')
+        
+        return df
+    
+    def _normalize_entities(self, df: pd.DataFrame) -> pd.DataFrame:
+        """标准化实体（去重ActorName）"""
+        if df.empty:
+            return df
+        
+        print(f"Normalizing entities in {len(df)} records")
+        
+        # 对Actor1Name和Actor2Name进行标准化处理
+        df['Actor1Name_normalized'] = df['Actor1Name'].apply(self._normalize_actor_name)
+        df['Actor2Name_normalized'] = df['Actor2Name'].apply(self._normalize_actor_name)
+        
+        # 实现去重逻辑 - 合并相同实体的记录
+        df = self._deduplicate_entities(df)
+        
+        return df
+    
+    def _normalize_actor_name(self, name: str) -> str:
+        """标准化参与者名称"""
+        if pd.isna(name) or name == '':
+            return ''
+        
+        # 清理名称：去除多余空格，统一大小写等
+        normalized = str(name).strip().title()
+        
+        # 处理常见的名称变体（如缩写、全称等）
+        name_mapping = {
+            'USA': 'United States',
+            'US': 'United States',
+            'UK': 'United Kingdom',
+            'UAE': 'United Arab Emirates',
+            'USSR': 'Soviet Union',
+            'CHN': 'China',
+            'JPN': 'Japan',
+            'GER': 'Germany',
+            'FRA': 'France',
+            'ITA': 'Italy',
+            'CAN': 'Canada',
+            'MEX': 'Mexico',
+            'BRA': 'Brazil',
+            'IND': 'India',
+            'AUS': 'Australia',
+            'KOR': 'South Korea',
+            'PRK': 'North Korea',
+            'SA': 'South Africa',
+            'NGA': 'Nigeria',
+            'EGY': 'Egypt',
+            'TUR': 'Turkey',
+            'SAU': 'Saudi Arabia',
+            # 可以根据需要添加更多映射
+        }
+        
+        # 应用映射
+        mapped_name = name_mapping.get(normalized, normalized)
+        
+        # 移除多余的词缀或描述
+        suffixes_to_remove = ['Government', 'Of', 'The', 'Republic', 'State', 'Province', 'City', 'Municipality']
+        for suffix in suffixes_to_remove:
+            mapped_name = mapped_name.replace(f' {suffix}', '').replace(f'{suffix} ', '')
+        
+        # 清理多余空格
+        mapped_name = ' '.join(mapped_name.split())
+        
+        return mapped_name
+    
+    def _deduplicate_entities(self, df: pd.DataFrame) -> pd.DataFrame:
+        """去重实体，合并相同实体的记录"""
+        if df.empty:
+            return df
+        
+        # 创建标准化的Actor组合键，用于识别重复项
+        df['actor_pair_normalized'] = df.apply(
+            lambda row: tuple(sorted([
+                row['Actor1Name_normalized'], 
+                row['Actor2Name_normalized']
+            ])), axis=1
+        )
+        
+        # 如果需要完全去重，可以基于标准化的实体对进行分组
+        # 这里我们保留每个实体对的最新记录
+        df_sorted = df.sort_values('SQLDATE', ascending=False)
+        df_deduplicated = df_sorted.drop_duplicates(
+            subset=['actor_pair_normalized', 'EventCode'], 
+            keep='first'
+        ).sort_index()  # 恢复原始顺序
+        
+        print(f"Deduplicated from {len(df)} to {len(df_deduplicated)} records")
+        
+        return df_deduplicated
+    
+    def _extract_roles(self, df: pd.DataFrame) -> pd.DataFrame:
+        """提取角色信息（Actor1为施事者，Actor2为受事者）"""
+        if df.empty:
+            return df
+        
+        print(f"Extracting roles in {len(df)} records")
+        
+        # 添加角色标签
+        df['Actor1_role'] = 'actor'  # 施事者（发起行动的实体）
+        df['Actor2_role'] = 'target'  # 受事者（接受行动的实体）
+        
+        # 根据事件代码确定事件类型和角色关系
+        df['event_type'] = df['EventCode'].apply(self._get_event_type)
+        df['actor_target_relationship'] = df.apply(self._determine_relationship, axis=1)
+        
+        # 增强角色信息
+        df['actor_description'] = df['Actor1Name_normalized'].apply(self._describe_actor)
+        df['target_description'] = df['Actor2Name_normalized'].apply(self._describe_actor)
+        
+        return df
+    
+    def _determine_relationship(self, row) -> str:
+        """根据事件代码确定施事者和受事者的关系"""
+        event_code = str(row['EventCode'])
+        if len(event_code) >= 2:
+            primary_code = event_code[:2]
+        else:
+            primary_code = event_code
+        
+        # 根据CAMEO事件代码定义关系
+        relationship_map = {
+            '01': 'makes_public_statement_to',      # 发表公开声明
+            '02': 'appeals_to',                    # 呼吁
+            '03': 'expresses_intent_to_cooperate_with',  # 表达合作意图
+            '04': 'consults_with',                  # 咨询
+            '05': 'engages_in_diplomatic_cooperation_with',  # 进行外交合作
+            '06': 'engages_in_material_cooperation_with',    # 进行物质合作
+            '07': 'provides_aid_to',               # 提供援助
+            '08': 'yields_to',                     # 屈服于
+            '09': 'investigates',                  # 调查
+            '10': 'demands_of',                    # 要求
+            '11': 'disapproves_of',                # 不赞成
+            '12': 'rejects',                       # 拒绝
+            '13': 'threatens_with',                # 以...威胁
+            '14': 'protests_against',              # 抗议
+            '15': 'exhibits_force_posture_towards', # 展示武力姿态
+            '16': 'reduces_relations_with',         # 减少与...的关系
+            '17': 'coerces',                       # 强制
+            '18': 'assaults',                      # 攻击
+            '19': 'fights_with',                   # 与...战斗
+            '20': 'uses_unconventional_violence_against'  # 对...使用非常规暴力
+        }
+        
+        return relationship_map.get(primary_code, f'interacts_with_code_{primary_code}')
+    
+    def _describe_actor(self, actor_name: str) -> str:
+        """描述参与者类型"""
+        if pd.isna(actor_name) or actor_name == '':
+            return 'unknown'
+        
+        # 根据名称模式判断参与者类型
+        actor_lower = actor_name.lower()
+        
+        # 国家类型
+        if any(country in actor_lower for country in ['china', 'united states', 'russia', 'france', 'germany', 
+                                                     'uk', 'united kingdom', 'japan', 'canada', 'australia']):
+            return 'country'
+        
+        # 组织类型
+        if any(org in actor_lower for org in ['party', 'government', 'ministry', 'department', 'agency', 
+                                             'committee', 'council', 'organization', 'union']):
+            return 'organization'
+        
+        # 个人类型
+        if len(actor_name.split()) <= 3:  # 姓名通常较短
+            return 'person'
+        
+        return 'entity'
+    
+    def _get_event_type(self, event_code: str) -> str:
+        """根据事件代码确定事件类型"""
+        if pd.isna(event_code):
+            return 'unknown'
+        
+        # CAMEO事件代码映射
+        # 这里只列出一些常见的事件类型，可以根据需要扩展
+        event_mapping = {
+            '01': 'make_public_statement',
+            '02': 'appeal',
+            '03': 'express_intent_to_cooperate',
+            '04': 'consult',
+            '05': 'engage_in_diplomatic_cooperation',
+            '06': 'engage_in_material_cooperation',
+            '07': 'provide_aid',
+            '08': 'yield',
+            '09': 'investigate',
+            '10': 'demand',
+            '11': 'disapprove',
+            '12': 'reject',
+            '13': 'threaten',
+            '14': 'protest',
+            '15': 'exhibit_force_posture',
+            '16': 'reduce_relations',
+            '17': 'coerce',
+            '18': 'assault',
+            '19': 'fight',
+            '20': 'use_unconventional_mass_violence'
+        }
+        
+        code_str = str(event_code)
+        # 取前两位作为主要事件类型
+        primary_code = code_str[:2] if len(code_str) >= 2 else code_str
+        
+        return event_mapping.get(primary_code, f'code_{code_str}')
+    
+    def _format_timestamps(self, df: pd.DataFrame) -> pd.DataFrame:
+        """时间戳提取和格式化"""
+        if df.empty:
+            return df
+        
+        print(f"Formatting timestamps in {len(df)} records")
+        
+        # 处理SQLDATE列
+        if 'SQLDATE' in df.columns:
+            df['timestamp_formatted'] = df['SQLDATE'].apply(self._format_sql_date)
+            df['date_parsed'] = df['SQLDATE'].apply(self._parse_sql_date)
+            df['year'] = df['date_parsed'].apply(lambda x: x.year if x is not None else None)
+            df['month'] = df['date_parsed'].apply(lambda x: x.month if x is not None else None)
+            df['day'] = df['date_parsed'].apply(lambda x: x.day if x is not None else None)
+            df['week'] = df['date_parsed'].apply(lambda x: x.isocalendar()[1] if x is not None else None)
+            df['quarter'] = df['date_parsed'].apply(lambda x: x.quarter if x is not None and hasattr(x, 'quarter') else None)
+        
+        # 处理其他可能的时间列
+        if 'DATEADDED' in df.columns:
+            df['dateadded_parsed'] = df['DATEADDED'].apply(self._parse_sql_date)
+        
+        # 如果有MentionTimeDate（来自mentions表）
+        if 'MentionTimeDate' in df.columns:
+            df['mention_timestamp'] = df['MentionTimeDate'].apply(self._format_mention_timestamp)
+        
+        # 创建时间特征
+        df = self._create_temporal_features(df)
+        
+        return df
+    
+    def _format_sql_date(self, sql_date: Union[str, int, float]) -> Optional[str]:
+        """格式化SQLDATE为标准时间戳格式"""
+        if pd.isna(sql_date):
+            return None
+        
+        try:
+            # SQLDATE格式通常是YYYYMMDD
+            date_str = str(int(sql_date)) if isinstance(sql_date, (int, float)) else str(sql_date)
+            if len(date_str) == 8:
+                dt = datetime.strptime(date_str, '%Y%m%d')
+                return dt.strftime('%Y-%m-%d %H:%M:%S')
+            elif len(date_str) == 14:  # YYYYMMDDHHMMSS 格式
+                dt = datetime.strptime(date_str, '%Y%m%d%H%M%S')
+                return dt.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                return str(sql_date)
+        except Exception:
+            return str(sql_date)
+    
+    def _parse_sql_date(self, sql_date: Union[str, int, float]) -> Optional[datetime]:
+        """解析SQLDATE为datetime对象"""
+        if pd.isna(sql_date):
+            return None
+        
+        try:
+            # SQLDATE格式通常是YYYYMMDD
+            date_str = str(int(sql_date)) if isinstance(sql_date, (int, float)) else str(sql_date)
+            if len(date_str) == 8:
+                return datetime.strptime(date_str, '%Y%m%d')
+            elif len(date_str) == 14:  # YYYYMMDDHHMMSS 格式
+                return datetime.strptime(date_str, '%Y%m%d%H%M%S')
+            else:
+                return None
+        except Exception:
+            return None
+    
+    def _format_mention_timestamp(self, mention_time: Union[str, int, float]) -> Optional[str]:
+        """格式化MentionTimeDate为标准时间戳格式"""
+        if pd.isna(mention_time):
+            return None
+        
+        try:
+            # MentionTimeDate格式通常是YYYYMMDDHHMMSS
+            time_str = str(int(mention_time)) if isinstance(mention_time, (int, float)) else str(mention_time)
+            if len(time_str) == 14:
+                dt = datetime.strptime(time_str, '%Y%m%d%H%M%S')
+                return dt.strftime('%Y-%m-%d %H:%M:%S')
+            elif len(time_str) == 8:  # 如果只有日期部分
+                dt = datetime.strptime(time_str, '%Y%m%d')
+                return dt.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                return str(time_str)
+        except Exception:
+            return str(mention_time)
+    
+    def _create_temporal_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """创建时间特征"""
+        if df.empty:
+            return df
+        
+        # 基于解析后的日期创建更多时间特征
+        if 'date_parsed' in df.columns:
+            date_col = df['date_parsed']
+            
+            # 工作日特征
+            df['day_of_week'] = date_col.apply(lambda x: x.weekday() if x is not None else None)
+            df['is_weekend'] = date_col.apply(lambda x: x.weekday() >= 5 if x is not None else None)
+            
+            # 季节特征
+            df['season'] = date_col.apply(lambda x: self._get_season(x.month) if x is not None else None)
+            
+            # 是否为月初/月末
+            df['is_month_start'] = date_col.apply(lambda x: x.day == 1 if x is not None else None)
+            df['is_month_end'] = date_col.apply(lambda x: x.day == x.days_in_month if x is not None and hasattr(x, 'days_in_month') else None)
+        
+        return df
+    
+    def _get_season(self, month: int) -> str:
+        """根据月份获取季节"""
+        if month in [12, 1, 2]:
+            return 'winter'
+        elif month in [3, 4, 5]:
+            return 'spring'
+        elif month in [6, 7, 8]:
+            return 'summer'
+        else:
+            return 'autumn'
+    
+    async def process_large_gdelt_data(
+        self, 
+        config: FetchConfig,
+        chunk_size: int = 10000
+    ) -> Union[pd.DataFrame, dd.DataFrame]:
+        """
+        处理大规模GDELT数据（支持Dask）
+        
+        Args:
+            config: 获取配置
+            chunk_size: 分块大小
+            
+        Returns:
+            处理后的DataFrame（pandas或Dask）
+        """
+        if self._use_dask:
+            return await self._process_with_dask(config, chunk_size)
+        else:
+            return await self.process_gdelt_data(config)
+    
+    async def _process_with_dask(
+        self, 
+        config: FetchConfig,
+        chunk_size: int = 10000
+    ) -> dd.DataFrame:
+        """使用Dask处理大规模数据"""
+        if not DASK_AVAILABLE:
+            print("Dask not available, falling back to pandas")
+            return await self.process_gdelt_data(config)
+        
+        # 由于Dask处理需要特定的数据源，我们模拟分块处理
+        # 在实际应用中，这可能需要从文件系统或数据库直接读取
+        
+        # 先获取所有数据
+        raw_data = await self._gdelt_adapter.fetch(config)
+        
+        if not raw_data.items:
+            return dd.from_pandas(pd.DataFrame(), npartitions=1)
+        
+        # 将数据转换为DataFrame
+        df = self._news_items_to_dataframe(raw_data.items)
+        
+        # 如果数据量大，使用Dask
+        if len(df) > chunk_size:
+            # 创建Dask DataFrame
+            ddf = dd.from_pandas(df, npartitions=max(1, len(df) // chunk_size))
+            
+            # 应用处理函数
+            ddf = ddf.map_partitions(self._process_partition)
+            
+            return ddf
+        else:
+            # 数据量小，直接使用pandas处理
+            processed_df = self._process_partition(df)
+            return dd.from_pandas(processed_df, npartitions=1)
+    
+    def _process_partition(self, partition_df: pd.DataFrame) -> pd.DataFrame:
+        """处理数据分区"""
+        # 预处理
+        partition_df = self._preprocess_data(partition_df)
+        
+        # 实体标准化
+        partition_df = self._normalize_entities(partition_df)
+        
+        # 角色提取
+        partition_df = self._extract_roles(partition_df)
+        
+        # 时间戳处理
+        partition_df = self._format_timestamps(partition_df)
+        
+        return partition_df
+    
+    def integrate_gkg_data(
+        self, 
+        events_df: pd.DataFrame, 
+        gkg_df: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        集成GKG文件以增强主题/情感分析
+        
+        Args:
+            events_df: 事件数据DataFrame
+            gkg_df: GKG数据DataFrame
+            
+        Returns:
+            集成后的DataFrame
+        """
+        if events_df.empty or gkg_df.empty:
+            return events_df
+        
+        print("Integrating GKG data with events data")
+        
+        # 这里实现GKG数据与事件数据的集成逻辑
+        # 通常通过日期或主题匹配
+        # 由于GKG和事件数据的结构不同，我们需要适当的连接逻辑
+        
+        # 示例：按日期连接（这可能需要根据实际数据结构调整）
+        if 'DATE' in gkg_df.columns and 'SQLDATE' in events_df.columns:
+            # 将事件数据的SQLDATE转换为GKG格式进行匹配
+            events_df['DATE'] = events_df['SQLDATE'].apply(
+                lambda x: int(str(x)[:8]) if pd.notna(x) else None
+            )
+            
+            # 合并数据
+            merged_df = pd.merge(
+                events_df,
+                gkg_df,
+                on='DATE',
+                how='left',
+                suffixes=('', '_gkg')
+            )
+            
+            return merged_df
+        else:
+            # 如果没有匹配的列，直接返回事件数据
+            print("Cannot merge events and GKG data: no matching columns found")
+            return events_df
+
+
+def _load_entity_equivs() -> Dict[str, Set[str]]:
 
 @register_tool(
     name="fetch_news_stream",
