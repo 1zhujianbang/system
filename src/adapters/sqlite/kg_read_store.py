@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -76,6 +77,72 @@ class SQLiteKGReadStore(KGReadStore):
                 "SELECT from_event_id, to_event_id, edge_type, time, confidence, evidence_json FROM event_edges"
             ).fetchall()
             return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+    def _resolve_event_id_with_conn(self, conn: sqlite3.Connection, event_id: str, max_hops: int = 20) -> str:
+        cur = (event_id or "").strip()
+        if not cur:
+            return ""
+        seen = set()
+        for _ in range(int(max_hops) if int(max_hops) > 0 else 20):
+            if cur in seen:
+                break
+            seen.add(cur)
+            row = conn.execute(
+                "SELECT to_event_id FROM event_redirects WHERE from_event_id=?",
+                (cur,),
+            ).fetchone()
+            if row is None:
+                break
+            nxt = str(row["to_event_id"] or "").strip()
+            if not nxt or nxt == cur:
+                break
+            cur = nxt
+        return cur
+
+    def resolve_event_id_by_abstract(self, abstract: str, max_hops: int = 20) -> str:
+        a = (abstract or "").strip()
+        if not a:
+            return ""
+        conn = self._connect()
+        try:
+            row = conn.execute("SELECT event_id FROM events WHERE abstract=?", (a,)).fetchone()
+            if row is None:
+                row = conn.execute("SELECT event_id FROM event_aliases WHERE abstract=?", (a,)).fetchone()
+            if row is None:
+                return ""
+            return self._resolve_event_id_with_conn(conn, str(row["event_id"] or ""), max_hops=max_hops)
+        finally:
+            conn.close()
+
+    def fetch_event_edges_by_event_id(self, event_id: str) -> List[Dict[str, Any]]:
+        eid = (event_id or "").strip()
+        if not eid:
+            return []
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                """
+                SELECT id, from_event_id, to_event_id, edge_type, time, reported_at, confidence, evidence_json
+                FROM event_edges
+                WHERE from_event_id=? OR to_event_id=?
+                ORDER BY time ASC
+                """,
+                (eid, eid),
+            ).fetchall()
+            out = []
+            for r in rows:
+                item = dict(r)
+                try:
+                    ev = json.loads(item.get("evidence_json") or "[]")
+                    if not isinstance(ev, list):
+                        ev = []
+                except Exception:
+                    ev = []
+                item["evidence"] = [x for x in ev if isinstance(x, str) and x.strip()]
+                out.append(item)
+            return out
         finally:
             conn.close()
 

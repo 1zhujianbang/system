@@ -847,4 +847,3 @@ class GDELTAdapter(NewsSource):
             return dt.astimezone(timezone.utc)
         except Exception:
             return None
-

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import hashlib
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple, Optional
 from abc import ABC, abstractmethod
 
@@ -19,6 +20,12 @@ from collections import defaultdict
 from src.web import utils
 from src.web.services.run_store import cache_dir
 from src.web.framework.user_context import get_user_context, render_user_context_controls
+from src.interfaces.web.snapshot_protocol import (
+    SnapshotLoader,
+    SnapshotTransformer,
+    GRAPH_TYPE_LABELS,
+    validate_snapshot_dict,
+)
 
 
 class GraphRenderer(ABC):
@@ -172,6 +179,246 @@ class GraphRenderer(ABC):
             st.error(f"图谱渲染失败: {e}")
 
 
+class SnapshotGraphRenderer(GraphRenderer):
+    def _build_pyvis_payload(
+        self,
+        nodes: List[Dict[str, Any]],
+        edges: List[Dict[str, Any]],
+        *,
+        focus_node: str = "",
+        max_nodes: int = 800,
+        max_edges: int = 2500,
+        min_degree: int = 0,
+    ) -> Tuple[List[Tuple[str, Dict[str, Any]]], List[Tuple[str, str, Dict[str, Any]]]]:
+        deg: Dict[str, int] = defaultdict(int)
+        for e in edges:
+            u = str(e.get("from", "")).strip()
+            v = str(e.get("to", "")).strip()
+            if not u or not v:
+                continue
+            deg[u] += 1
+            deg[v] += 1
+
+        if focus_node:
+            target_nodes: Set[str] = {focus_node}
+            adj: Dict[str, Set[str]] = defaultdict(set)
+            for e in edges:
+                u = str(e.get("from", "")).strip()
+                v = str(e.get("to", "")).strip()
+                if not u or not v:
+                    continue
+                adj[u].add(v)
+                adj[v].add(u)
+            frontier = {focus_node}
+            for _ in range(2):
+                nxt = set()
+                for x in frontier:
+                    nxt |= adj.get(x, set())
+                nxt -= target_nodes
+                target_nodes |= nxt
+                frontier = nxt
+        else:
+            candidates = [nid for nid, d in deg.items() if d >= int(min_degree)]
+            candidates_sorted = sorted(candidates, key=lambda x: deg.get(x, 0), reverse=True)
+            target_nodes = set(candidates_sorted[: int(max_nodes) if int(max_nodes) > 0 else 800])
+
+        filtered_edges = []
+        for e in edges:
+            u = str(e.get("from", "")).strip()
+            v = str(e.get("to", "")).strip()
+            if u in target_nodes and v in target_nodes:
+                filtered_edges.append(e)
+        filtered_edges = filtered_edges[: int(max_edges) if int(max_edges) > 0 else 2500]
+
+        nodes_by_id = {str(n.get("id")): n for n in nodes if isinstance(n, dict) and str(n.get("id", "")).strip()}
+        used_nodes: Set[str] = set()
+        for e in filtered_edges:
+            used_nodes.add(str(e.get("from", "")).strip())
+            used_nodes.add(str(e.get("to", "")).strip())
+        nodes2 = [nodes_by_id[nid] for nid in used_nodes if nid in nodes_by_id]
+
+        pyvis_nodes: List[Tuple[str, Dict[str, Any]]] = []
+        for n in nodes2:
+            nid = str(n.get("id"))
+            ntype = str(n.get("type") or "entity").strip() or "entity"
+            label = str(n.get("label") or nid)
+            color = str(n.get("color") or "#1f77b4")
+            is_focus = bool(focus_node) and nid == focus_node
+            size = 22
+            if ntype == "event":
+                size = 18
+            if is_focus:
+                size = 30
+            d = deg.get(nid, 0)
+            size = min(size + int(d / 3), 40)
+            shape = "dot"
+            if ntype == "relation_state":
+                shape = "box"
+            title = json.dumps(n, ensure_ascii=False, indent=2)[:4000]
+            pyvis_nodes.append(
+                (
+                    nid,
+                    {
+                        "label": label[:80],
+                        "color": "#e74c3c" if is_focus else color,
+                        "shape": shape,
+                        "size": size,
+                        "title": title,
+                        "borderWidth": 2,
+                        "borderWidthSelected": 3,
+                        "font": {"size": 12, "color": "#333333", "bold": is_focus},
+                    },
+                )
+            )
+
+        pyvis_edges: List[Tuple[str, str, Dict[str, Any]]] = []
+        for e in filtered_edges:
+            u = str(e.get("from", "")).strip()
+            v = str(e.get("to", "")).strip()
+            etype = str(e.get("type") or "").strip().lower()
+            title = str(e.get("title") or "")
+            t = str(e.get("time") or "")
+            edge_title = f"{etype} | {title} | {t}".strip(" |")[:400]
+            arrows = {"to": {"enabled": etype in {"before", "evolved_to", "evolve", "causes"}}}
+            color = "#95a5a6"
+            if etype in {"before"}:
+                color = "#3498db"
+            if etype in {"evolved_to", "evolve"}:
+                color = "#9b59b6"
+            pyvis_edges.append(
+                (
+                    u,
+                    v,
+                    {
+                        "title": edge_title,
+                        "width": 2,
+                        "color": {"color": color, "highlight": "#2ecc71", "hover": "#2ecc71", "opacity": 0.6},
+                        "smooth": {"enabled": True, "type": "dynamic", "roundness": 0.4},
+                        "arrows": arrows,
+                        "length": 150,
+                    },
+                )
+            )
+
+        return pyvis_nodes, pyvis_edges
+
+    def render(self) -> None:
+        st.subheader("📦 快照视图（统一协议）")
+
+        loader = SnapshotLoader(snapshot_dir=Path("data/snapshots"))
+        available = loader.list_available_types()
+
+        with st.sidebar:
+            st.header("📦 快照控制")
+            graph_type = st.selectbox(
+                "快照类型",
+                options=available,
+                format_func=lambda x: GRAPH_TYPE_LABELS.get(str(x), str(x)),
+            )
+            max_nodes = st.slider("最大节点数", 200, 5000, 800, 100)
+            max_edges = st.slider("最大边数", 200, 10000, 2500, 100)
+            min_degree = st.slider("最小度数", 0, 20, 0, 1)
+            focus_enabled = st.checkbox("聚焦模式（2跳）", value=False)
+            time_hours = st.slider("时间过滤（小时，0=不过滤）", 0, 24 * 30, 0, 12)
+
+            gen = st.button("生成/刷新五图谱快照", use_container_width=True)
+
+        if gen:
+            with st.spinner("生成快照中..."):
+                try:
+                    from src.app.services_impl import get_kg_service
+
+                    res = get_kg_service().generate_snapshots()
+                    if not getattr(res, "success", False):
+                        st.error(f"快照生成失败: {getattr(res, 'error', '')}")
+                    else:
+                        st.success("快照生成完成")
+                except Exception as e:
+                    st.error(f"快照生成异常: {e}")
+
+        raw = loader.load_snapshot(graph_type)
+        if raw is None:
+            st.warning(f"未找到快照文件: data/snapshots/{graph_type}.json（或 KG 原始文件缺失）")
+            st.stop()
+
+        if graph_type == "KG":
+            snapshot = SnapshotTransformer.from_kg_json(raw)
+        else:
+            snapshot = raw
+
+        nodes = SnapshotTransformer.normalize_nodes(snapshot.get("nodes", []) if isinstance(snapshot, dict) else [])
+        edges = SnapshotTransformer.normalize_edges(snapshot.get("edges", []) if isinstance(snapshot, dict) else [])
+        meta = snapshot.get("meta", {}) if isinstance(snapshot, dict) else {}
+        graph_type2 = str(meta.get("graph_type") or graph_type)
+
+        snapshot2 = {"meta": meta, "nodes": nodes, "edges": edges}
+        if time_hours and int(time_hours) > 0:
+            snapshot2 = SnapshotTransformer.filter_by_time(snapshot2, int(time_hours))
+            nodes = snapshot2.get("nodes", [])
+            edges = snapshot2.get("edges", [])
+
+        entity_candidates = sorted([str(n.get("id")) for n in nodes if str(n.get("type", "")) == "entity"])
+        focus_node = ""
+        if focus_enabled and entity_candidates:
+            focus_node = st.sidebar.selectbox("聚焦实体", options=[""] + entity_candidates, index=0)
+
+        report = validate_snapshot_dict({"meta": {"graph_type": graph_type2, **meta}, "nodes": nodes, "edges": edges})
+
+        st.info(f"📈 {GRAPH_TYPE_LABELS.get(graph_type2, graph_type2)}：{report['counts']['nodes']} 节点，{report['counts']['edges']} 边")
+        if not report.get("ok", False):
+            st.error("快照协议校验未通过")
+            if report.get("errors"):
+                st.json({"errors": report.get("errors")})
+            if report.get("missing_nodes"):
+                st.json({"missing_nodes_sample": report.get("missing_nodes")})
+            if report.get("missing_edges"):
+                st.json({"missing_edges_sample": report.get("missing_edges")})
+
+        with st.expander("字段协议清单", expanded=False):
+            st.write("必填字段")
+            st.json({"node": report["required"]["node"], "edge": report["required"]["edge"]})
+            if report.get("recommended", {}).get("node") or report.get("recommended", {}).get("edge"):
+                st.write("推荐字段（按图谱类型）")
+                st.json(report.get("recommended", {}))
+
+        if focus_node:
+            snapshot2 = SnapshotTransformer.filter_by_focus({"meta": meta, "nodes": nodes, "edges": edges}, focus_entity=focus_node, max_depth=2)
+            nodes = snapshot2.get("nodes", [])
+            edges = snapshot2.get("edges", [])
+
+        pyvis_nodes, pyvis_edges = self._build_pyvis_payload(
+            nodes,
+            edges,
+            focus_node=focus_node,
+            max_nodes=int(max_nodes),
+            max_edges=int(max_edges),
+            min_degree=int(min_degree),
+        )
+
+        if not pyvis_nodes or not pyvis_edges:
+            st.info("当前筛选条件下没有可显示的图谱数据。")
+            st.stop()
+
+        self._render_pyvis(
+            nodes=pyvis_nodes,
+            edges=pyvis_edges,
+            layout_config={
+                "physics": {
+                    "enabled": True,
+                    "barnesHut": {
+                        "gravitationalConstant": -2500,
+                        "centralGravity": 0.3,
+                        "springLength": 140,
+                        "springConstant": 0.04,
+                        "damping": 0.09,
+                        "avoidOverlap": 0,
+                    },
+                },
+            },
+            directed=True,
+        )
+
+
 def render() -> None:
     """主渲染函数"""
     render_user_context_controls()
@@ -180,6 +427,7 @@ def render() -> None:
     view_mode = st.sidebar.selectbox(
         "📊 图谱类型",
         [
+            "快照视图（统一协议）",
             "实体-事件关系图谱",
             "实体时序图谱",
             "实体关系图谱",
@@ -191,6 +439,7 @@ def render() -> None:
     
     # 根据视图模式渲染
     renderer_map = {
+        "快照视图（统一协议）": SnapshotGraphRenderer(),
         "实体-事件关系图谱": EntityEventGraphRenderer(),
         "实体时序图谱": TimelineGraphRenderer(),
         "实体关系图谱": EntityRelationGraphRenderer(),

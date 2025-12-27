@@ -359,3 +359,76 @@ class SnapshotTransformer:
             "nodes": filtered_nodes,
             "edges": filtered_edges,
         }
+
+
+REQUIRED_NODE_FIELDS = ["id", "label", "type", "color"]
+REQUIRED_EDGE_FIELDS = ["from", "to", "type", "title", "time"]
+
+RECOMMENDED_NODE_FIELDS_BY_GRAPH: Dict[str, List[str]] = {
+    "GE": ["entity_id", "event_id", "abstract", "time", "event_types", "roles"],
+    "GET": ["entity_id", "event_id", "abstract", "time", "event_types"],
+    "EE": ["entity_id"],
+    "EE_EVO": ["entity_id", "interval_start", "interval_end", "evidence"],
+    "EVENT_EVO": ["event_id", "abstract", "time", "event_types"],
+    "KG": [],
+}
+
+RECOMMENDED_EDGE_FIELDS_BY_GRAPH: Dict[str, List[str]] = {
+    "GE": ["roles", "event_id", "abstract"],
+    "GET": ["event_id", "abstract"],
+    "EE": ["predicate", "evidence", "event_id"],
+    "EE_EVO": ["predicate", "evidence"],
+    "EVENT_EVO": ["confidence", "evidence", "reported_at"],
+    "KG": [],
+}
+
+
+def validate_snapshot_dict(snapshot: Dict[str, Any]) -> Dict[str, Any]:
+    meta = snapshot.get("meta") if isinstance(snapshot, dict) else {}
+    graph_type = str((meta or {}).get("graph_type") or "")
+
+    nodes = snapshot.get("nodes") if isinstance(snapshot, dict) else None
+    edges = snapshot.get("edges") if isinstance(snapshot, dict) else None
+    nodes = nodes if isinstance(nodes, list) else []
+    edges = edges if isinstance(edges, list) else []
+
+    errors: List[str] = []
+
+    missing_nodes = []
+    for i, n in enumerate(nodes[:2000]):
+        if not isinstance(n, dict):
+            missing_nodes.append({"index": i, "missing": REQUIRED_NODE_FIELDS})
+            continue
+        missing = [k for k in REQUIRED_NODE_FIELDS if not str(n.get(k, "")).strip()]
+        if missing:
+            missing_nodes.append({"index": i, "id": str(n.get("id", "")), "missing": missing})
+
+    missing_edges = []
+    for i, e in enumerate(edges[:5000]):
+        if not isinstance(e, dict):
+            missing_edges.append({"index": i, "missing": REQUIRED_EDGE_FIELDS})
+            continue
+        missing = [k for k in REQUIRED_EDGE_FIELDS if not str(e.get(k, "")).strip()]
+        if missing:
+            missing_edges.append({"index": i, "from": str(e.get("from", "")), "to": str(e.get("to", "")), "missing": missing})
+
+    meta_node_count = (meta or {}).get("node_count")
+    meta_edge_count = (meta or {}).get("edge_count")
+    if meta_node_count is not None and int(meta_node_count) != len(nodes):
+        errors.append(f"meta.node_count({meta_node_count}) != len(nodes)({len(nodes)})")
+    if meta_edge_count is not None and int(meta_edge_count) != len(edges):
+        errors.append(f"meta.edge_count({meta_edge_count}) != len(edges)({len(edges)})")
+
+    return {
+        "graph_type": graph_type,
+        "ok": (not errors) and (not missing_nodes) and (not missing_edges),
+        "errors": errors,
+        "missing_nodes": missing_nodes[:50],
+        "missing_edges": missing_edges[:50],
+        "counts": {"nodes": len(nodes), "edges": len(edges)},
+        "required": {"node": REQUIRED_NODE_FIELDS, "edge": REQUIRED_EDGE_FIELDS},
+        "recommended": {
+            "node": RECOMMENDED_NODE_FIELDS_BY_GRAPH.get(graph_type, []),
+            "edge": RECOMMENDED_EDGE_FIELDS_BY_GRAPH.get(graph_type, []),
+        },
+    }

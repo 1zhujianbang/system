@@ -35254,3 +35254,131 @@
 [2025-12-27 13:59:23] [batch_process_news] 成功记录 0 个已处理ID到数据库
 [2025-12-27 13:59:23] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
 [2025-12-27 13:59:23] [batch_process_news] 处理完成，总共提取到 2 个事件
+[2025-12-27 17:56:35] [batch_process_news] 开始处理，新闻数量: 1, limit: 1
+[2025-12-27 17:56:35] [batch_process_news] 去重后新闻数量: 1
+[2025-12-27 17:56:35] [batch_process_news] 应用limit后新闻数量: 1
+[2025-12-27 17:56:35] [batch_process_news] 准备处理 1 条唯一新闻
+[2025-12-27 17:56:35] [batch_process_news] 开始串行处理 1 条新闻
+[2025-12-27 17:56:35] [batch_process_news] 处理第 1 条新闻: Sample Title...
+[2025-12-27 17:56:35] [batch_process_news] 第 1 条新闻提取到 1 个事件
+[2025-12-27 17:56:35] [batch_process_news] 开始写入 1 个事件到SQLite
+[2025-12-27 17:56:35] [batch_process_news] 已写入 1 个实体 (来源: GDELT)
+[2025-12-27 17:56:35] [batch_process_news] 已写入 1 个事件 (来源: GDELT)
+[2025-12-27 17:56:35] [batch_process_news] 记录 1 个已处理的ID
+[2025-12-27 17:56:35] [batch_process_news] 成功记录 0 个已处理ID到数据库
+[2025-12-27 17:56:35] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
+[2025-12-27 17:56:35] [batch_process_news] 处理完成，总共提取到 1 个事件
+[2025-12-27 17:56:35] [batch_process_news] 开始处理，新闻数量: 2, limit: 2
+[2025-12-27 17:56:35] [batch_process_news] 去重后新闻数量: 2
+[2025-12-27 17:56:35] [batch_process_news] 应用limit后新闻数量: 2
+[2025-12-27 17:56:35] [batch_process_news] 准备处理 2 条唯一新闻
+[2025-12-27 17:56:35] [batch_process_news] 开始串行处理 2 条新闻
+[2025-12-27 17:56:35] [batch_process_news] 处理第 1 条新闻: GDELT Combined Title...
+[2025-12-27 17:56:35] [batch_process_news] 第 1 条新闻提取到 1 个事件
+[2025-12-27 17:56:35] [batch_process_news] 处理第 2 条新闻: GNews Combined Title...
+[2025-12-27 17:56:35] [batch_process_news] 第 2 条新闻提取到 1 个事件
+[2025-12-27 17:56:35] [batch_process_news] 开始写入 2 个事件到SQLite
+[2025-12-27 17:56:35] [batch_process_news] 已写入 1 个实体 (来源: GDELT)
+[2025-12-27 17:56:35] [batch_process_news] 已写入 1 个事件 (来源: GDELT)
+[2025-12-27 17:56:35] [batch_process_news] 已写入 1 个实体 (来源: GNews-us)
+[2025-12-27 17:56:35] [batch_process_news] 已写入 1 个事件 (来源: GNews-us)
+[2025-12-27 17:56:35] [batch_process_news] 记录 2 个已处理的ID
+[2025-12-27 17:56:35] [batch_process_news] 成功记录 0 个已处理ID到数据库
+[2025-12-27 17:56:35] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
+[2025-12-27 17:56:35] [batch_process_news] 处理完成，总共提取到 2 个事件
+[2025-12-27 18:04:41] [batch_process_news] 开始处理，新闻数量: 1, limit: 1
+[2025-12-27 18:04:41] [batch_process_news] 去重后新闻数量: 1
+[2025-12-27 18:04:41] [batch_process_news] 应用limit后新闻数量: 1
+[2025-12-27 18:04:41] [batch_process_news] 准备处理 1 条唯一新闻
+[2025-12-27 18:04:41] [batch_process_news] 开始串行处理 1 条新闻
+[2025-12-27 18:04:41] [batch_process_news] 处理第 1 条新闻: Sample Title...
+[2025-12-27 18:04:41] [batch_process_news] 第 1 条新闻提取到 1 个事件
+[2025-12-27 18:04:41] [batch_process_news] 开始写入 1 个事件到SQLite
+[2025-12-27 18:04:41] [batch_process_news] 已写入 1 个实体 (来源: GDELT)
+[2025-12-27 18:04:41] [batch_process_news] 已写入 1 个事件 (来源: GDELT)
+[2025-12-27 18:04:41] [batch_process_news] 记录 1 个已处理的ID
+[2025-12-27 18:04:41] [batch_process_news] 成功记录 0 个已处理ID到数据库
+[2025-12-27 18:04:41] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
+[2025-12-27 18:04:41] [batch_process_news] 处理完成，总共提取到 1 个事件
+[2025-12-27 18:04:41] [batch_process_news] 开始处理，新闻数量: 2, limit: 2
+[2025-12-27 18:04:41] [batch_process_news] 去重后新闻数量: 2
+[2025-12-27 18:04:41] [batch_process_news] 应用limit后新闻数量: 2
+[2025-12-27 18:04:41] [batch_process_news] 准备处理 2 条唯一新闻
+[2025-12-27 18:04:41] [batch_process_news] 开始串行处理 2 条新闻
+[2025-12-27 18:04:41] [batch_process_news] 处理第 1 条新闻: GDELT Combined Title...
+[2025-12-27 18:04:41] [batch_process_news] 第 1 条新闻提取到 1 个事件
+[2025-12-27 18:04:41] [batch_process_news] 处理第 2 条新闻: GNews Combined Title...
+[2025-12-27 18:04:41] [batch_process_news] 第 2 条新闻提取到 1 个事件
+[2025-12-27 18:04:41] [batch_process_news] 开始写入 2 个事件到SQLite
+[2025-12-27 18:04:41] [batch_process_news] 已写入 1 个实体 (来源: GDELT)
+[2025-12-27 18:04:41] [batch_process_news] 已写入 1 个事件 (来源: GDELT)
+[2025-12-27 18:04:41] [batch_process_news] 已写入 1 个实体 (来源: GNews-us)
+[2025-12-27 18:04:41] [batch_process_news] 已写入 1 个事件 (来源: GNews-us)
+[2025-12-27 18:04:41] [batch_process_news] 记录 2 个已处理的ID
+[2025-12-27 18:04:41] [batch_process_news] 成功记录 0 个已处理ID到数据库
+[2025-12-27 18:04:41] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
+[2025-12-27 18:04:41] [batch_process_news] 处理完成，总共提取到 2 个事件
+[2025-12-27 18:14:23] [batch_process_news] 开始处理，新闻数量: 1, limit: 1
+[2025-12-27 18:14:23] [batch_process_news] 去重后新闻数量: 1
+[2025-12-27 18:14:23] [batch_process_news] 应用limit后新闻数量: 1
+[2025-12-27 18:14:23] [batch_process_news] 准备处理 1 条唯一新闻
+[2025-12-27 18:14:23] [batch_process_news] 开始串行处理 1 条新闻
+[2025-12-27 18:14:23] [batch_process_news] 处理第 1 条新闻: Sample Title...
+[2025-12-27 18:14:23] [batch_process_news] 第 1 条新闻提取到 1 个事件
+[2025-12-27 18:14:23] [batch_process_news] 开始写入 1 个事件到SQLite
+[2025-12-27 18:14:23] [batch_process_news] 已写入 1 个实体 (来源: GDELT)
+[2025-12-27 18:14:23] [batch_process_news] 已写入 1 个事件 (来源: GDELT)
+[2025-12-27 18:14:23] [batch_process_news] 记录 1 个已处理的ID
+[2025-12-27 18:14:23] [batch_process_news] 成功记录 0 个已处理ID到数据库
+[2025-12-27 18:14:23] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
+[2025-12-27 18:14:23] [batch_process_news] 处理完成，总共提取到 1 个事件
+[2025-12-27 18:14:23] [batch_process_news] 开始处理，新闻数量: 2, limit: 2
+[2025-12-27 18:14:23] [batch_process_news] 去重后新闻数量: 2
+[2025-12-27 18:14:23] [batch_process_news] 应用limit后新闻数量: 2
+[2025-12-27 18:14:23] [batch_process_news] 准备处理 2 条唯一新闻
+[2025-12-27 18:14:23] [batch_process_news] 开始串行处理 2 条新闻
+[2025-12-27 18:14:23] [batch_process_news] 处理第 1 条新闻: GDELT Combined Title...
+[2025-12-27 18:14:23] [batch_process_news] 第 1 条新闻提取到 1 个事件
+[2025-12-27 18:14:23] [batch_process_news] 处理第 2 条新闻: GNews Combined Title...
+[2025-12-27 18:14:23] [batch_process_news] 第 2 条新闻提取到 1 个事件
+[2025-12-27 18:14:23] [batch_process_news] 开始写入 2 个事件到SQLite
+[2025-12-27 18:14:23] [batch_process_news] 已写入 1 个实体 (来源: GDELT)
+[2025-12-27 18:14:23] [batch_process_news] 已写入 1 个事件 (来源: GDELT)
+[2025-12-27 18:14:23] [batch_process_news] 已写入 1 个实体 (来源: GNews-us)
+[2025-12-27 18:14:23] [batch_process_news] 已写入 1 个事件 (来源: GNews-us)
+[2025-12-27 18:14:23] [batch_process_news] 记录 2 个已处理的ID
+[2025-12-27 18:14:23] [batch_process_news] 成功记录 0 个已处理ID到数据库
+[2025-12-27 18:14:23] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
+[2025-12-27 18:14:23] [batch_process_news] 处理完成，总共提取到 2 个事件
+[2025-12-27 18:17:06] [batch_process_news] 开始处理，新闻数量: 1, limit: 1
+[2025-12-27 18:17:06] [batch_process_news] 去重后新闻数量: 1
+[2025-12-27 18:17:06] [batch_process_news] 应用limit后新闻数量: 1
+[2025-12-27 18:17:06] [batch_process_news] 准备处理 1 条唯一新闻
+[2025-12-27 18:17:06] [batch_process_news] 开始串行处理 1 条新闻
+[2025-12-27 18:17:06] [batch_process_news] 处理第 1 条新闻: Sample Title...
+[2025-12-27 18:17:06] [batch_process_news] 第 1 条新闻提取到 1 个事件
+[2025-12-27 18:17:06] [batch_process_news] 开始写入 1 个事件到SQLite
+[2025-12-27 18:17:06] [batch_process_news] 已写入 1 个实体 (来源: GDELT)
+[2025-12-27 18:17:06] [batch_process_news] 已写入 1 个事件 (来源: GDELT)
+[2025-12-27 18:17:06] [batch_process_news] 记录 1 个已处理的ID
+[2025-12-27 18:17:06] [batch_process_news] 成功记录 0 个已处理ID到数据库
+[2025-12-27 18:17:06] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
+[2025-12-27 18:17:06] [batch_process_news] 处理完成，总共提取到 1 个事件
+[2025-12-27 18:17:06] [batch_process_news] 开始处理，新闻数量: 2, limit: 2
+[2025-12-27 18:17:06] [batch_process_news] 去重后新闻数量: 2
+[2025-12-27 18:17:06] [batch_process_news] 应用limit后新闻数量: 2
+[2025-12-27 18:17:06] [batch_process_news] 准备处理 2 条唯一新闻
+[2025-12-27 18:17:06] [batch_process_news] 开始串行处理 2 条新闻
+[2025-12-27 18:17:06] [batch_process_news] 处理第 1 条新闻: GDELT Combined Title...
+[2025-12-27 18:17:06] [batch_process_news] 第 1 条新闻提取到 1 个事件
+[2025-12-27 18:17:06] [batch_process_news] 处理第 2 条新闻: GNews Combined Title...
+[2025-12-27 18:17:06] [batch_process_news] 第 2 条新闻提取到 1 个事件
+[2025-12-27 18:17:06] [batch_process_news] 开始写入 2 个事件到SQLite
+[2025-12-27 18:17:06] [batch_process_news] 已写入 1 个实体 (来源: GDELT)
+[2025-12-27 18:17:06] [batch_process_news] 已写入 1 个事件 (来源: GDELT)
+[2025-12-27 18:17:06] [batch_process_news] 已写入 1 个实体 (来源: GNews-us)
+[2025-12-27 18:17:06] [batch_process_news] 已写入 1 个事件 (来源: GNews-us)
+[2025-12-27 18:17:06] [batch_process_news] 记录 2 个已处理的ID
+[2025-12-27 18:17:06] [batch_process_news] 成功记录 0 个已处理ID到数据库
+[2025-12-27 18:17:06] [batch_process_news] ✅ 已导出SQLite数据到JSON文件
+[2025-12-27 18:17:06] [batch_process_news] 处理完成，总共提取到 2 个事件

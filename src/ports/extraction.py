@@ -40,6 +40,7 @@ class NewsItem:
     category: Optional[str] = None
     language: str = "zh"
     raw_data: Optional[Dict[str, Any]] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -52,6 +53,7 @@ class NewsItem:
             "author": self.author,
             "category": self.category,
             "language": self.language,
+            "metadata": self.metadata,
         }
 
 

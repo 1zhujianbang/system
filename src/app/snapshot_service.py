@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..infra.paths import tools as Tools
 from ..ports.kg_read_store import KGReadStore
+from ..ports.snapshot import SnapshotParams
 from ..adapters.sqlite.kg_read_store import SQLiteKGReadStore
+from ..adapters.sqlite.schema import SCHEMA_VERSION as SQLITE_SCHEMA_VERSION
 
 
 _tools = Tools()
+SNAPSHOT_SCHEMA_VERSION = "1"
 
 
 def _utc_now_iso() -> str:
@@ -41,15 +43,6 @@ def _edge_time_fallback(*vals: Any) -> str:
     return _utc_now_iso()
 
 
-@dataclass
-class SnapshotParams:
-    top_entities: int = 500
-    top_events: int = 500
-    max_edges: int = 5000
-    days_window: int = 0  # 0=all
-    gap_days: int = 30  # EE_EVO 分段阈值
-
-
 class SnapshotService:
     """
     五图谱快照投影服务（SQLite -> data/snapshots/*.json）
@@ -59,6 +52,88 @@ class SnapshotService:
         self.db_path = db_path or _tools.SQLITE_DB_FILE
         self.out_dir = out_dir or _tools.SNAPSHOTS_DIR
         self.store: KGReadStore = store or SQLiteKGReadStore(self.db_path)
+
+    def _normalize_node(self, n: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if not isinstance(n, dict):
+            return None
+        node_id = str(n.get("id") or "").strip()
+        if not node_id:
+            return None
+        node_type = str(n.get("type") or "entity").strip() or "entity"
+        color_default = {"entity": "#1f77b4", "event": "#ff7f0e", "relation_state": "#999999"}.get(node_type, "#1f77b4")
+        out = {
+            "id": node_id,
+            "label": str(n.get("label") or node_id),
+            "type": node_type,
+            "color": str(n.get("color") or color_default),
+        }
+        for k, v in n.items():
+            if k in {"id", "label", "type", "color"}:
+                continue
+            if k == "attrs" and isinstance(v, dict):
+                for kk, vv in v.items():
+                    if kk not in out:
+                        out[kk] = vv
+                continue
+            out[k] = v
+        return out
+
+    def _normalize_edge(self, e: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if not isinstance(e, dict):
+            return None
+        u = str(e.get("from") or "").strip()
+        v = str(e.get("to") or "").strip()
+        if not u or not v:
+            return None
+        out = {
+            "from": u,
+            "to": v,
+            "type": str(e.get("type") or "").strip(),
+            "title": str(e.get("title") or ""),
+            "time": str(e.get("time") or "").strip() or _utc_now_iso(),
+        }
+        for k, val in e.items():
+            if k in {"from", "to", "type", "title", "time"}:
+                continue
+            if k == "attrs" and isinstance(val, dict):
+                for kk, vv in val.items():
+                    if kk not in out:
+                        out[kk] = vv
+                continue
+            out[k] = val
+        return out
+
+    def _wrap_snapshot(self, graph_type: str, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]], params: SnapshotParams) -> Dict[str, Any]:
+        nodes2 = []
+        for n in nodes:
+            nn = self._normalize_node(n)
+            if nn is not None:
+                nodes2.append(nn)
+        edges2 = []
+        for e in edges:
+            ee = self._normalize_edge(e)
+            if ee is not None:
+                edges2.append(ee)
+
+        return {
+            "meta": {
+                "graph_type": graph_type,
+                "generated_at": _utc_now_iso(),
+                "schema_version": SNAPSHOT_SCHEMA_VERSION,
+                "params": {
+                    "top_entities": int(params.top_entities),
+                    "top_events": int(params.top_events),
+                    "max_edges": int(params.max_edges),
+                    "days_window": int(params.days_window),
+                    "gap_days": int(params.gap_days),
+                    "sqlite_schema_version": str(SQLITE_SCHEMA_VERSION),
+                },
+                "node_count": len(nodes2),
+                "edge_count": len(edges2),
+            },
+            "nodes": nodes2,
+            "edges": edges2,
+        }
 
     def _filter_by_days_window(self, ts: str, days_window: int) -> bool:
         if not days_window or days_window <= 0:
@@ -101,7 +176,7 @@ class SnapshotService:
     # Builders
     # -------------------------
     def build_ge(self, rows_entities: List[Dict[str, Any]], rows_events: List[Dict[str, Any]], rows_parts: List[Dict[str, Any]], params: SnapshotParams) -> Dict[str, Any]:
-        entid_to_name, _ = self._load_entity_map_from_rows(rows_entities)
+        entid_to_name, name_to_ent = self._load_entity_map_from_rows(rows_entities)
         _, abs_to_evt = self._load_event_map_from_rows(rows_events)
 
         edges: List[Dict[str, Any]] = []
@@ -120,35 +195,54 @@ class SnapshotService:
 
             if evt_node not in nodes:
                 evt = abs_to_evt.get(abs_key, {})
+                try:
+                    evt_types = json.loads(evt.get("event_types_json") or "[]")
+                    if not isinstance(evt_types, list):
+                        evt_types = []
+                except Exception:
+                    evt_types = []
                 nodes[evt_node] = {
                     "id": evt_node,
                     "label": (evt.get("event_summary") or abs_key)[:80],
                     "type": "event",
                     "color": "#ff7f0e",
                     "time": _edge_time_fallback(evt.get("event_start_time", ""), evt.get("reported_at", ""), evt.get("first_seen", "")),
+                    "event_id": str(evt.get("event_id") or ""),
+                    "abstract": abs_key,
+                    "event_types": [x for x in evt_types if isinstance(x, str) and x.strip()][:12],
                 }
             if ent_name not in nodes:
-                nodes[ent_name] = {"id": ent_name, "label": ent_name, "type": "entity", "color": "#1f77b4"}
+                ent = name_to_ent.get(ent_name) or {}
+                nodes[ent_name] = {
+                    "id": ent_name,
+                    "label": ent_name,
+                    "type": "entity",
+                    "color": "#1f77b4",
+                    "entity_id": str(ent.get("entity_id") or ""),
+                    "first_seen": str(ent.get("first_seen") or ""),
+                }
 
             title = "involved_in"
+            roles_out: List[str] = []
             try:
                 roles = json.loads(r.get("roles_json") or "[]")
                 if isinstance(roles, list) and roles:
-                    title = " / ".join([x for x in roles if isinstance(x, str) and x.strip()][:6])
+                    roles_out = [x.strip() for x in roles if isinstance(x, str) and x.strip()]
+                    title = " / ".join(roles_out[:6])
             except Exception:
                 pass
 
-            edges.append({"from": ent_name, "to": evt_node, "type": "involved_in", "title": title, "time": t})
+            edges.append({"from": ent_name, "to": evt_node, "type": "involved_in", "title": title, "time": t, "roles": roles_out[:12]})
             deg[ent_name] = deg.get(ent_name, 0) + 1
             deg[evt_node] = deg.get(evt_node, 0) + 1
 
         top = set(sorted(deg, key=deg.get, reverse=True)[: params.top_entities + params.top_events])
         edges2 = [e for e in edges if e["from"] in top and e["to"] in top][: params.max_edges]
         nodes2 = [v for k, v in nodes.items() if k in top]
-        return {"meta": {"graph_type": "GE", "generated_at": _utc_now_iso()}, "nodes": nodes2, "edges": edges2}
+        return self._wrap_snapshot("GE", nodes2, edges2, params)
 
     def build_get(self, rows_entities: List[Dict[str, Any]], rows_events: List[Dict[str, Any]], rows_parts: List[Dict[str, Any]], params: SnapshotParams) -> Dict[str, Any]:
-        entid_to_name, _ = self._load_entity_map_from_rows(rows_entities)
+        entid_to_name, name_to_ent = self._load_entity_map_from_rows(rows_entities)
         _, abs_to_evt = self._load_event_map_from_rows(rows_events)
 
         by_ent: Dict[str, List[Tuple[str, str]]] = {}
@@ -166,15 +260,33 @@ class SnapshotService:
             evt_node = f"EVT:{abs_key}"
             by_ent.setdefault(ent, []).append((t, evt_node))
 
-            nodes.setdefault(ent, {"id": ent, "label": ent, "type": "entity", "color": "#1f77b4"})
+            if ent not in nodes:
+                ent_row = name_to_ent.get(ent) or {}
+                nodes[ent] = {
+                    "id": ent,
+                    "label": ent,
+                    "type": "entity",
+                    "color": "#1f77b4",
+                    "entity_id": str(ent_row.get("entity_id") or ""),
+                    "first_seen": str(ent_row.get("first_seen") or ""),
+                }
             if evt_node not in nodes:
                 evt = abs_to_evt.get(abs_key, {})
+                try:
+                    evt_types = json.loads(evt.get("event_types_json") or "[]")
+                    if not isinstance(evt_types, list):
+                        evt_types = []
+                except Exception:
+                    evt_types = []
                 nodes[evt_node] = {
                     "id": evt_node,
                     "label": (evt.get("event_summary") or abs_key)[:80],
                     "type": "event",
                     "color": "#ff7f0e",
                     "time": _edge_time_fallback(evt.get("event_start_time", ""), evt.get("reported_at", ""), evt.get("first_seen", "")),
+                    "event_id": str(evt.get("event_id") or ""),
+                    "abstract": abs_key,
+                    "event_types": [x for x in evt_types if isinstance(x, str) and x.strip()][:12],
                 }
             edges.append({"from": ent, "to": evt_node, "type": "involved_in", "title": "involved_in", "time": t})
 
@@ -190,10 +302,10 @@ class SnapshotService:
         top = set(sorted(deg, key=deg.get, reverse=True)[: params.top_entities + params.top_events])
         edges2 = [e for e in edges if e["from"] in top and e["to"] in top][: params.max_edges]
         nodes2 = [v for k, v in nodes.items() if k in top]
-        return {"meta": {"graph_type": "GET", "generated_at": _utc_now_iso()}, "nodes": nodes2, "edges": edges2}
+        return self._wrap_snapshot("GET", nodes2, edges2, params)
 
     def build_ee(self, rows_entities: List[Dict[str, Any]], rows_rels: List[Dict[str, Any]], params: SnapshotParams) -> Dict[str, Any]:
-        entid_to_name, _ = self._load_entity_map_from_rows(rows_entities)
+        entid_to_name, name_to_ent = self._load_entity_map_from_rows(rows_entities)
 
         agg: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
         for r in rows_rels:
@@ -228,8 +340,12 @@ class SnapshotService:
         for _, v in agg.items():
             s = v["from"]
             o = v["to"]
-            nodes.setdefault(s, {"id": s, "label": s, "type": "entity", "color": "#1f77b4"})
-            nodes.setdefault(o, {"id": o, "label": o, "type": "entity", "color": "#1f77b4"})
+            if s not in nodes:
+                ent_row = name_to_ent.get(s) or {}
+                nodes[s] = {"id": s, "label": s, "type": "entity", "color": "#1f77b4", "entity_id": str(ent_row.get("entity_id") or ""), "first_seen": str(ent_row.get("first_seen") or "")}
+            if o not in nodes:
+                ent_row = name_to_ent.get(o) or {}
+                nodes[o] = {"id": o, "label": o, "type": "entity", "color": "#1f77b4", "entity_id": str(ent_row.get("entity_id") or ""), "first_seen": str(ent_row.get("first_seen") or "")}
             edges.append(
                 {
                     "from": s,
@@ -237,7 +353,10 @@ class SnapshotService:
                     "type": "relation",
                     "title": v["title"],
                     "time": v["time_first"],
-                    "attrs": {"last_seen": v["time_last"], "evidence": v["evidence"][:5]},
+                    "time_first": v["time_first"],
+                    "time_last": v["time_last"],
+                    "last_seen": v["time_last"],
+                    "evidence": v["evidence"][:5],
                 }
             )
 
@@ -248,7 +367,7 @@ class SnapshotService:
         top = set(sorted(deg, key=deg.get, reverse=True)[: params.top_entities])
         edges2 = [e for e in edges if e["from"] in top and e["to"] in top][: params.max_edges]
         nodes2 = [v for k, v in nodes.items() if k in top]
-        return {"meta": {"graph_type": "EE", "generated_at": _utc_now_iso()}, "nodes": nodes2, "edges": edges2}
+        return self._wrap_snapshot("EE", nodes2, edges2, params)
 
     def build_ee_evo(self, rows_entities: List[Dict[str, Any]], rows_rels: List[Dict[str, Any]], params: SnapshotParams) -> Dict[str, Any]:
         entid_to_name, _ = self._load_entity_map_from_rows(rows_entities)
@@ -309,16 +428,16 @@ class SnapshotService:
                     "type": "relation_state",
                     "color": "#999999",
                     "time": t0,
-                    "attrs": {"valid_from": t0, "valid_to": t1, "evidence": evs_flat[:5]},
+                    "valid_from": t0,
+                    "valid_to": t1,
+                    "evidence": evs_flat[:5],
                 }
                 edges.append({"from": s, "to": rel_id, "type": "rel_in", "title": "rel", "time": t0})
                 edges.append({"from": rel_id, "to": o, "type": "rel_out", "title": "rel", "time": t0})
 
-        return {
-            "meta": {"graph_type": "EE_EVO", "generated_at": _utc_now_iso()},
-            "nodes": list(nodes.values())[: params.top_entities + params.top_events],
-            "edges": edges[: params.max_edges],
-        }
+        nodes2 = list(nodes.values())[: params.top_entities + params.top_events]
+        edges2 = edges[: params.max_edges]
+        return self._wrap_snapshot("EE_EVO", nodes2, edges2, params)
 
     def build_event_evo(self, rows_entities: List[Dict[str, Any]], rows_events: List[Dict[str, Any]], rows_edges: List[Dict[str, Any]], rows_parts: List[Dict[str, Any]], params: SnapshotParams) -> Dict[str, Any]:
         entid_to_name, _ = self._load_entity_map_from_rows(rows_entities)
@@ -371,11 +490,11 @@ class SnapshotService:
                 roles = []
             if not any(isinstance(x, str) and ("被" in x or "受" in x or "遭" in x) for x in roles):
                 continue
-            nodes.setdefault(evt_node, {"id": evt_node, "label": (str(r["event_summary"] or abs_key))[:80], "type": "event", "color": "#ff7f0e"})
+            nodes.setdefault(evt_node, {"id": evt_node, "label": (str(r.get("event_summary") or abs_key))[:80], "type": "event", "color": "#ff7f0e"})
             nodes.setdefault(ent_name, {"id": ent_name, "label": ent_name, "type": "entity", "color": "#1f77b4"})
             edges.append({"from": evt_node, "to": ent_name, "type": "affects", "title": "affects", "time": t})
 
-        return {"meta": {"graph_type": "EVENT_EVO", "generated_at": _utc_now_iso()}, "nodes": list(nodes.values()), "edges": edges[: params.max_edges]}
+        return self._wrap_snapshot("EVENT_EVO", list(nodes.values()), edges[: params.max_edges], params)
 
     # -------------------------
     # Public API
@@ -420,5 +539,3 @@ class SnapshotService:
             paths[name] = str(p)
 
         return {"status": "ok", "paths": paths}
-
-

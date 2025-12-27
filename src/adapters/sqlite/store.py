@@ -1634,6 +1634,80 @@ class SQLiteStore:
             finally:
                 conn.close()
 
+    def _resolve_redirect_with_conn(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        table: str,
+        from_col: str,
+        to_col: str,
+        start_id: str,
+        max_hops: int,
+    ) -> str:
+        cur = (start_id or "").strip()
+        if not cur:
+            return ""
+        seen = set()
+        for _ in range(int(max_hops) if int(max_hops) > 0 else 20):
+            if cur in seen:
+                break
+            seen.add(cur)
+            row = conn.execute(
+                f"SELECT {to_col} FROM {table} WHERE {from_col}=?",
+                (cur,),
+            ).fetchone()
+            if row is None:
+                break
+            nxt = str(row[to_col] or "").strip()
+            if not nxt or nxt == cur:
+                break
+            cur = nxt
+        return cur
+
+    def resolve_event_id(self, event_id: str, *, max_hops: int = 20) -> str:
+        with self._lock:
+            conn = self._connect()
+            try:
+                return self._resolve_redirect_with_conn(
+                    conn,
+                    table="event_redirects",
+                    from_col="from_event_id",
+                    to_col="to_event_id",
+                    start_id=event_id,
+                    max_hops=max_hops,
+                )
+            finally:
+                conn.close()
+
+    def resolve_event_id_by_abstract(self, abstract: str, *, max_hops: int = 20) -> str:
+        a = (abstract or "").strip()
+        if not a:
+            return ""
+        with self._lock:
+            conn = self._connect()
+            try:
+                row = conn.execute(
+                    "SELECT event_id FROM events WHERE abstract=?",
+                    (a,),
+                ).fetchone()
+                if row is None:
+                    row = conn.execute(
+                        "SELECT event_id FROM event_aliases WHERE abstract=?",
+                        (a,),
+                    ).fetchone()
+                if row is None:
+                    return ""
+                return self._resolve_redirect_with_conn(
+                    conn,
+                    table="event_redirects",
+                    from_col="from_event_id",
+                    to_col="to_event_id",
+                    start_id=str(row["event_id"] or ""),
+                    max_hops=max_hops,
+                )
+            finally:
+                conn.close()
+
     # -------------------------
     # News-Event Mapping APIs
     # -------------------------
@@ -1730,5 +1804,4 @@ def get_store() -> SQLiteStore:
             if _store_singleton is None:
                 _store_singleton = SQLiteStore()
     return _store_singleton
-
 
