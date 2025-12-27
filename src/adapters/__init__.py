@@ -24,6 +24,7 @@ from .export import (
     CompatJsonExporter,
 )
 from .news.api_manager import GNewsAdapter, NewsAPIManager, get_news_manager
+from .news.gdelt_adapter import GDELTAdapter
 from .extraction import LLMEntityExtractor, LLMEventExtractor
 
 __all__ = [
@@ -44,11 +45,13 @@ __all__ = [
     "CompatJsonExporter",
     # News
     "GNewsAdapter",
+    "GDELTAdapter",
     "NewsAPIManager",
     "get_news_manager",
     # Extraction
     "LLMEntityExtractor",
     "LLMEventExtractor",
 ]
+
 
 

@@ -478,14 +478,53 @@
       "Moscou"
     ]
   },
+  "俄罗斯总统 弗拉基米尔·普京": {
+    "first_seen": "2025-11-21T20:44:03+00:00",
+    "sources": [
+      {
+        "id": "67a1334198e0438abe34c3c45ae4b48dd799627c",
+        "name": "Le Monde.fr",
+        "url": ""
+      },
+      {
+        "id": "5e2a03acb3cee42bf94a7dc6d4ccc7ea0d5c6879",
+        "name": "9News.com.au",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "俄罗斯总统 弗拉基米尔·普京",
+      "Russian President Vladimir Putin"
+    ]
+  },
   "台北市": {
     "first_seen": "2025-12-13T07:47:06+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "67a1334198e0438abe34c3c45ae4b48dd799627c",
+        "name": "Le Monde.fr",
+        "url": ""
+      },
+      {
+        "id": "2b105d3936a501dc81f695fd446c24e5a6fa2785",
+        "name": "The Sydney Morning Herald",
+        "url": ""
+      },
+      {
+        "id": "f05aaf796647b6e830cee988a640ef53bbe736df",
+        "name": "경향신문",
+        "url": ""
+      },
+      {
+        "id": "a9511e476b8ce40217803f2145505c55f2c71c1e",
+        "name": "風傳媒",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "台北",
-      "台北市",
       "Taipei",
-      "타이베이"
+      "타이베이",
+      "台北市"
     ]
   },
   "台北捷运": {
@@ -1023,14 +1062,37 @@
   },
   "巴西国会": {
     "first_seen": "2025-11-20T23:20:00+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "a5bb1b5d95b9d7b28b4c39db8b8f3ea252bca3dd",
+        "name": "Senado Federal",
+        "url": ""
+      },
+      {
+        "id": "257e159de4f45345a7a8b8e03f4ea74a7ed264b7",
+        "name": "G1",
+        "url": ""
+      },
+      {
+        "id": "15e962a66039b081dce6f4e47f1568aac824972d",
+        "name": "Portal da Câmara dos Deputados",
+        "url": ""
+      },
+      {
+        "id": "88883fe5ed0b929bf8acf62241d2b9e28eaae9cf",
+        "name": "Correio Braziliense",
+        "url": ""
+      },
+      {
+        "id": "5a5553d196ca2c54bd083dc598707f8481685a68",
+        "name": "TV Foco",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "巴西国会",
-      "巴西国会全体会议",
-      "comando do Congresso",
-      "Plenário do Congresso Nacional",
       "Congresso",
-      "Congresso Nacional"
+      "Congresso Nacional",
+      "comando do Congresso"
     ]
   },
   "Apple Watch": {
@@ -1347,6 +1409,19 @@
     ],
     "original_forms": [
       "Steven Spielberg"
+    ]
+  },
+  "巴黎司法法院": {
+    "first_seen": "2025-12-19T16:26:42+00:00",
+    "sources": [
+      {
+        "id": "88c71b40df332ad866713274f9abaca4ea6d54db",
+        "name": "RTVE.es",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "El Tribunal Judicial de París"
     ]
   },
   "Shein": {
@@ -2046,6 +2121,19 @@
       "Verwaltungsrat der Techniker Krankenkasse (TK)"
     ]
   },
+  "宋晟文": {
+    "first_seen": "2025-12-19T16:18:31+00:00",
+    "sources": [
+      {
+        "id": "66a0ba590f5203baee2041c08f46846ac0705bfd",
+        "name": "스타뉴스",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "송성문"
+    ]
+  },
   "圣地亚哥教士队": {
     "first_seen": "2025-11-20T20:00:00+00:00",
     "sources": [
@@ -2184,11 +2272,14 @@
   },
   "宋承文": {
     "first_seen": "2025-12-19T16:18:31+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "66a0ba590f5203baee2041c08f46846ac0705bfd",
+        "name": "스타뉴스",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "宋晟文",
-      "宋承文",
-      "송성문",
       "송성문(29·키움 히어로즈)"
     ]
   },
@@ -2303,14 +2394,93 @@
   },
   "台湾": {
     "first_seen": "2025-11-20T02:32:00+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "66a0ba590f5203baee2041c08f46846ac0705bfd",
+        "name": "스타뉴스",
+        "url": ""
+      },
+      {
+        "id": "e7d2f1b5268b1c90f9d3e204fb0a6fadf668a68c",
+        "name": "BBC",
+        "url": ""
+      },
+      {
+        "id": "f05aaf796647b6e830cee988a640ef53bbe736df",
+        "name": "경향신문",
+        "url": ""
+      },
+      {
+        "id": "af08311826975eb5ce3d69124bcb71a6c089eba3",
+        "name": "大紀元",
+        "url": ""
+      },
+      {
+        "id": "4404330ce80fb79f3da35177b2afe9a4d2ea079f",
+        "name": "Bloomberg.co.jp",
+        "url": ""
+      },
+      {
+        "id": "b162cdf3b28a91305e024b42202505fecb6e3acf",
+        "name": "KBS 뉴스",
+        "url": ""
+      },
+      {
+        "id": "8b68ac5f55f6409638fe57eaf026bcac9b784103",
+        "name": "産経ニュース",
+        "url": ""
+      },
+      {
+        "id": "85dfc9f2f604d4d69cca056cf8950b8229c538f2",
+        "name": "한겨레",
+        "url": ""
+      },
+      {
+        "id": "86b4e56b9794fccebf88f92c396a896145382064",
+        "name": "DW",
+        "url": ""
+      },
+      {
+        "id": "4639c68ea9017a9f79e9142c026d78769416f539",
+        "name": "O TEMPO",
+        "url": ""
+      },
+      {
+        "id": "4f677846a4d89aaf462abaf64644b0f1d8d2d075",
+        "name": "au Webポータル",
+        "url": ""
+      },
+      {
+        "id": "16b2d2c91df8f8877ced508b98138828a00125cb",
+        "name": "La Nuova Bussola Quotidiana",
+        "url": ""
+      },
+      {
+        "id": "90f795a9be1a06f663c896dcc607858d252a74db",
+        "name": "문화일보",
+        "url": ""
+      },
+      {
+        "id": "09fd094fc03301bc55ac007f00ca52eb87435f2e",
+        "name": "光明网",
+        "url": ""
+      },
+      {
+        "id": "b6bdf5e807b37edf7fdaf39d0f22bd9f5c2af8a9",
+        "name": "Gazeta do Povo",
+        "url": ""
+      },
+      {
+        "id": "ddd8480949a68c9776690e9a70ba291a33796c5b",
+        "name": "ｄメニューニュース",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "타이완",
-      "Taiwan",
-      "台湾",
-      "台湾地区",
       "대만",
-      "台灣"
+      "台湾",
+      "타이완",
+      "Taiwan"
     ]
   },
   "洛杉矶公羊队": {
@@ -2548,13 +2718,16 @@
     ]
   },
   "俄罗斯总统弗拉基米尔·普京": {
-    "first_seen": "2025-11-21T20:44:03+00:00",
-    "sources": [],
+    "first_seen": "2025-12-19T16:16:34+00:00",
+    "sources": [
+      {
+        "id": "e7d2f1b5268b1c90f9d3e204fb0a6fadf668a68c",
+        "name": "BBC",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "俄罗斯总统弗拉基米尔·普京",
-      "Russian President Vladimir Putin",
-      "Russia's President Vladimir Putin",
-      "俄罗斯总统 弗拉基米尔·普京"
+      "Russia's President Vladimir Putin"
     ]
   },
   "乌克兰": {
@@ -3010,6 +3183,19 @@
     ],
     "original_forms": [
       "Old Bailey"
+    ]
+  },
+  "台北": {
+    "first_seen": "2025-12-19T16:16:34+00:00",
+    "sources": [
+      {
+        "id": "e7d2f1b5268b1c90f9d3e204fb0a6fadf668a68c",
+        "name": "BBC",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Taipei"
     ]
   },
   "Aria Thorpe": {
@@ -4375,6 +4561,88 @@
       "全国两会"
     ]
   },
+  "特朗普": {
+    "first_seen": "2025-11-20T18:58:11+00:00",
+    "sources": [
+      {
+        "id": "e7d2f1b5268b1c90f9d3e204fb0a6fadf668a68c",
+        "name": "BBC",
+        "url": ""
+      },
+      {
+        "id": "16e8bddc0c61ed755915c2749b12a46bf164972c",
+        "name": "Castanet",
+        "url": ""
+      },
+      {
+        "id": "4404330ce80fb79f3da35177b2afe9a4d2ea079f",
+        "name": "Bloomberg.co.jp",
+        "url": ""
+      },
+      {
+        "id": "138068c13c34d3912339246310b01eb8195cf846",
+        "name": "tagesschau.de",
+        "url": ""
+      },
+      {
+        "id": "88c71b40df332ad866713274f9abaca4ea6d54db",
+        "name": "RTVE.es",
+        "url": ""
+      },
+      {
+        "id": "085f56f4444a8a8ce73c26087c29e703c677c59a",
+        "name": "WELT",
+        "url": ""
+      },
+      {
+        "id": "6ba819b5520fc30c38538471c9b0a9f5935f1ecc",
+        "name": "纽约时报中文网",
+        "url": ""
+      },
+      {
+        "id": "db71a08061e4c0039ba1e57b28d3d398b9d46940",
+        "name": "Il Sole 24 ORE",
+        "url": ""
+      },
+      {
+        "id": "4f2b5399bc2060c41d51f17a26b9494637c6b558",
+        "name": "T-Online",
+        "url": ""
+      },
+      {
+        "id": "0d127bd16d4558ede3babf0bbb4a8dc7ee1af92e",
+        "name": "BFMTV",
+        "url": ""
+      },
+      {
+        "id": "b81332df1a5fd1af6a3885f58714ea60fe0008f6",
+        "name": "Reuters",
+        "url": ""
+      },
+      {
+        "id": "f6a19c2dd19ea4a9206a6d1ef24cacafbed58c11",
+        "name": "UOL Notícias",
+        "url": ""
+      },
+      {
+        "id": "89156d1146c95ca0b8802681804d9cb2999a454a",
+        "name": "QQ.COM",
+        "url": ""
+      },
+      {
+        "id": "f2ffa27adc9cb43372ddbc7aa5bc089d220aade9",
+        "name": "g1.globo.com",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "特朗普",
+      "Donald Trump",
+      "トランプ米大統領",
+      "Präsident Trump",
+      "Trump"
+    ]
+  },
   "英伟达": {
     "first_seen": "2025-11-20T12:01:00+00:00",
     "sources": [
@@ -5371,28 +5639,137 @@
   },
   "欧盟": {
     "first_seen": "2025-11-20T01:07:17+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "d364fdeb816751bc293773a03422b4c3225b6056",
+        "name": "Frankfurter Rundschau",
+        "url": ""
+      },
+      {
+        "id": "7e8c8d3777cd615d5624647de1db49428f72eae2",
+        "name": "Cinco Días",
+        "url": ""
+      },
+      {
+        "id": "9dc2609c68a3deacc00f3a96b880f02e9bbae1e3",
+        "name": "Korrespondent.net",
+        "url": ""
+      },
+      {
+        "id": "e0d4d2a1d22bc7540da4e36bd59bacc0d36de16c",
+        "name": "CNN Brasil",
+        "url": ""
+      },
+      {
+        "id": "21e7e93c4884e4da5fc0dd885f68d81f0619193e",
+        "name": "Tgcom24",
+        "url": ""
+      },
+      {
+        "id": "dea58436bf219edb1c1ca224fbe6a5abd856bb05",
+        "name": "The Age",
+        "url": ""
+      },
+      {
+        "id": "4404330ce80fb79f3da35177b2afe9a4d2ea079f",
+        "name": "Bloomberg.co.jp",
+        "url": ""
+      },
+      {
+        "id": "86702232082f4e49caf9ea37eccb52c22390fc06",
+        "name": "Il Messaggero",
+        "url": ""
+      },
+      {
+        "id": "88c71b40df332ad866713274f9abaca4ea6d54db",
+        "name": "RTVE.es",
+        "url": ""
+      },
+      {
+        "id": "6113f4dc7d6daf53385e910f98954078122dcde7",
+        "name": "Kyiv Post",
+        "url": ""
+      },
+      {
+        "id": "085f56f4444a8a8ce73c26087c29e703c677c59a",
+        "name": "WELT",
+        "url": ""
+      },
+      {
+        "id": "662e323e8fff803c5659b415f4ba0c1f8893b59c",
+        "name": "tve24.ru",
+        "url": ""
+      },
+      {
+        "id": "a2a524e7d78ad1ae91e5a77c50709b219ded57b9",
+        "name": "Правда.Ру",
+        "url": ""
+      },
+      {
+        "id": "db71a08061e4c0039ba1e57b28d3d398b9d46940",
+        "name": "Il Sole 24 ORE",
+        "url": ""
+      },
+      {
+        "id": "b6afb6ac15bbc87a2f337066ebeaca6c6f25884f",
+        "name": "la Repubblica",
+        "url": ""
+      },
+      {
+        "id": "cc15470fce51d3cd3d6a93f6c7b7ae585b8bbaa5",
+        "name": "Ars Technica",
+        "url": ""
+      },
+      {
+        "id": "aba6ab6c6627e3cea581d5465df85791cc344618",
+        "name": "BagheriaInfo.it",
+        "url": ""
+      },
+      {
+        "id": "4fbea20e5c7a07de1147aff030f4b2d8d810c368",
+        "name": "新浪新闻_手机新浪网",
+        "url": ""
+      },
+      {
+        "id": "924dbce27dfa7dfaed36be5dcdf66d54f0d72d7f",
+        "name": "GA online",
+        "url": ""
+      },
+      {
+        "id": "6ec2d2fdffa1958b6d1496d9659b7db724f0b8e3",
+        "name": "時事ドットコム",
+        "url": ""
+      },
+      {
+        "id": "b81332df1a5fd1af6a3885f58714ea60fe0008f6",
+        "name": "Reuters",
+        "url": ""
+      },
+      {
+        "id": "34ca2e7203a59a0b0541a170ca5e08ff450116af",
+        "name": "martinique.franceantilles.fr",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "Ue",
-      "ЕС",
-      "Євросоюзу",
-      "Евросоюза",
-      "Европейский союз (ЕС)",
-      "欧",
-      "europei",
-      "Європи",
-      "the EU",
-      "欧洲联盟",
       "EU",
       "UE",
-      "欧盟",
-      "欧州連合（ＥＵ）",
-      "Unione europea",
-      "欧州連合（EU）",
+      "Європи",
       "União Europeia",
+      "Unione europea",
+      "欧盟",
+      "欧州連合（EU）",
+      "Ue",
+      "europei",
       "Unión Europea",
-      "droit européen",
-      "Europa"
+      "the EU",
+      "Євросоюзу",
+      "Евросоюза",
+      "ЕС",
+      "Europa",
+      "欧",
+      "欧州連合（ＥＵ）",
+      "droit européen"
     ]
   },
   "德国": {
@@ -6670,6 +7047,19 @@
       "el Grupo Salinas"
     ]
   },
+  "里卡多·萨利纳斯": {
+    "first_seen": "2025-12-19T16:01:00+00:00",
+    "sources": [
+      {
+        "id": "05dbb6ea5ef869339da826532c1fa0c59e9fe4fa",
+        "name": "Aristegui Noticias",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Ricardo Salinas"
+    ]
+  },
   "巴西众议院": {
     "first_seen": "2025-11-21T23:05:19+00:00",
     "sources": [
@@ -6808,6 +7198,32 @@
     ],
     "original_forms": [
       "Mercosur"
+    ]
+  },
+  "肯尼迪表演艺术中心": {
+    "first_seen": "2025-12-19T15:59:57+00:00",
+    "sources": [
+      {
+        "id": "fd9e0b8098dd57be73bdff751bd7361460330056",
+        "name": "CNN",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Kennedy Center"
+    ]
+  },
+  "肯尼迪表演艺术中心董事会": {
+    "first_seen": "2025-12-19T15:59:57+00:00",
+    "sources": [
+      {
+        "id": "fd9e0b8098dd57be73bdff751bd7361460330056",
+        "name": "CNN",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "the institution’s board of trustees"
     ]
   },
   "华盛顿哥伦比亚特区": {
@@ -7142,6 +7558,11 @@
         "id": "8d7a5bb3d6ace33a1aa089c1fab1f6189b98d921",
         "name": "The Daily Beast",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
@@ -7455,6 +7876,19 @@
       "Municipio I Roma Centro"
     ]
   },
+  "巴西国会全体会议": {
+    "first_seen": "2025-12-19T15:48:00+00:00",
+    "sources": [
+      {
+        "id": "15e962a66039b081dce6f4e47f1568aac824972d",
+        "name": "Portal da Câmara dos Deputados",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Plenário do Congresso Nacional"
+    ]
+  },
   "Ibovespa": {
     "first_seen": "2025-12-19T15:43:55+00:00",
     "sources": [
@@ -7759,22 +8193,28 @@
   },
   "肯尼迪中心": {
     "first_seen": "2025-12-19T15:47:00+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "16e8bddc0c61ed755915c2749b12a46bf164972c",
+        "name": "Castanet",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "Kennedy Center",
-      "肯尼迪表演艺术中心",
-      "The Kennedy Center",
-      "肯尼迪中心"
+      "The Kennedy Center"
     ]
   },
   "肯尼迪中心董事会": {
     "first_seen": "2025-12-19T15:47:00+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "16e8bddc0c61ed755915c2749b12a46bf164972c",
+        "name": "Castanet",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "the president's handpicked board",
-      "肯尼迪表演艺术中心董事会",
-      "the institution’s board of trustees",
-      "肯尼迪中心董事会"
+      "the president's handpicked board"
     ]
   },
   "Pete Davidson": {
@@ -7926,12 +8366,28 @@
   },
   "法国巴黎司法法庭": {
     "first_seen": "2025-12-19T15:43:01+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "7e8c8d3777cd615d5624647de1db49428f72eae2",
+        "name": "Cinco Días",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "巴黎司法法院",
-      "El Tribunal Judicial de París",
-      "Tribunal Judicial de París",
-      "法国巴黎司法法庭"
+      "Tribunal Judicial de París"
+    ]
+  },
+  "台湾地区行政机构负责人": {
+    "first_seen": "2025-12-19T15:35:28+00:00",
+    "sources": [
+      {
+        "id": "2b105d3936a501dc81f695fd446c24e5a6fa2785",
+        "name": "The Sydney Morning Herald",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "the premier"
     ]
   },
   "俄亥俄大学": {
@@ -8039,6 +8495,126 @@
     ],
     "original_forms": [
       "Avatar 3"
+    ]
+  },
+  "美国总统 Donald Trump": {
+    "first_seen": "2025-11-20T17:36:25+00:00",
+    "sources": [
+      {
+        "id": "355c5c7bcbb86a5141a07e775beb981a779e303e",
+        "name": "PBS",
+        "url": ""
+      },
+      {
+        "id": "2869dec2451f267540c5475652d1b8f6f06bfea9",
+        "name": "The Washington Post",
+        "url": ""
+      },
+      {
+        "id": "a1317e1694d2648da95b05011a86d1f27da6fdaa",
+        "name": "abc.net.au",
+        "url": ""
+      },
+      {
+        "id": "dea58436bf219edb1c1ca224fbe6a5abd856bb05",
+        "name": "The Age",
+        "url": ""
+      },
+      {
+        "id": "ca90e2f438e2d80f24e6bfab6c91b079768bec53",
+        "name": "Clarin.com",
+        "url": ""
+      },
+      {
+        "id": "1140c75f0d54c88a69deec48cd4c18e1fdecf5ae",
+        "name": "EL PAÍS",
+        "url": ""
+      },
+      {
+        "id": "3f8c223eae9bc32976f2f31e5ef6cd7aa356c97d",
+        "name": "The Straits Times",
+        "url": ""
+      },
+      {
+        "id": "8c7c4cfe95dd47bb58a097381472b7300b5764df",
+        "name": "Perfil",
+        "url": ""
+      },
+      {
+        "id": "ea8a17bc9b5f5621fbef2a0526204a67220e190b",
+        "name": "Adnkronos",
+        "url": ""
+      },
+      {
+        "id": "51b558a9c0edbd0f99de976d71083591055dcca9",
+        "name": "Tagesspiegel",
+        "url": ""
+      },
+      {
+        "id": "5ef52f64a0970ddee935b9b440d4f4a820dbfb2b",
+        "name": "The Globe and Mail",
+        "url": ""
+      },
+      {
+        "id": "5cbcc04a2de4b2efd267bc495889cf19351d52ac",
+        "name": "Il Fatto Quotidiano",
+        "url": ""
+      },
+      {
+        "id": "3790b445a59231c60c24b7e453b3efa864adfeed",
+        "name": "India Today",
+        "url": ""
+      },
+      {
+        "id": "ee24e09c3a2ca86bd23b7ded2ec6b5a4b2bf601e",
+        "name": "Ouest-France",
+        "url": ""
+      },
+      {
+        "id": "fd9e0b8098dd57be73bdff751bd7361460330056",
+        "name": "CNN",
+        "url": ""
+      },
+      {
+        "id": "d00e24d1c25a92f97d20b4c4b2811ad4f89513a4",
+        "name": "Spiegel",
+        "url": ""
+      },
+      {
+        "id": "e8bf9091231a3af7c2ad3183fc955afe27fbdaf2",
+        "name": "CNA",
+        "url": ""
+      },
+      {
+        "id": "4a42a014fef5ca38124e4f45e37175d83234632b",
+        "name": "Europa Press",
+        "url": ""
+      },
+      {
+        "id": "2f6c11f197001fe69a38c7f2dd64e68f99e1c314",
+        "name": "dw.com",
+        "url": ""
+      },
+      {
+        "id": "0ebe416e9e2b63a855dabbe9e88f8024daca75b2",
+        "name": "Straight Arrow News",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "President Donald Trump",
+      "US President Donald Trump",
+      "el presidente Donald Trump",
+      "presidente estadounidense, Donald Trump",
+      "el presidente estadounidense Donald Trump",
+      "presidente degli Stati Uniti Donald Trump",
+      "US-Präsident Donald Trump",
+      "U.S. President Donald Trump",
+      "presidente Donald Trump",
+      "Le président américain Donald Trump",
+      "der neue Bürgermeister von New York, Zohran Mamdani",
+      "El presidente de Estados Unidos, Donald Trump",
+      "presidente de Estados Unidos, Donald Trump"
     ]
   },
   "美国国土安全部部长 Kristi Noem": {
@@ -8194,6 +8770,34 @@
       "MÉXICO",
       "Ciudad Juárez",
       "Morelos"
+    ]
+  },
+  "克劳迪娅·希恩鲍姆": {
+    "first_seen": "2025-11-20T20:28:00+00:00",
+    "sources": [
+      {
+        "id": "877a1000cf944db6141577366889d7337149283a",
+        "name": "La Jornada",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Sheinbaum",
+      "Claudia Sheinbaum"
+    ]
+  },
+  "克劳迪娅·辛鲍姆": {
+    "first_seen": "2025-12-19T15:20:00+00:00",
+    "sources": [
+      {
+        "id": "877a1000cf944db6141577366889d7337149283a",
+        "name": "La Jornada",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Claudia Sheinbaum",
+      "La presidenta Claudia Sheinbaum"
     ]
   },
   "委内瑞拉": {
@@ -8909,25 +9513,33 @@
   },
   "克劳迪娅·谢因鲍姆·帕尔多": {
     "first_seen": "2025-11-20T20:28:00+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "c00fbc5890e39c5b9ccf3828a39b767c88832c08",
+        "name": "El Universal",
+        "url": ""
+      },
+      {
+        "id": "877a1000cf944db6141577366889d7337149283a",
+        "name": "La Jornada",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "克劳迪娅·谢因鲍姆·帕尔多",
-      "La presidenta Claudia Sheinbaum",
-      "克劳迪娅·希恩鲍姆",
-      "Claudia Sheinbaum",
-      "克劳迪娅·辛鲍姆",
-      "Sheinbaum",
       "Claudia Sheinbaum Pardo"
     ]
   },
   "里卡多·萨利纳斯·普列戈": {
     "first_seen": "2025-12-19T15:06:53+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "c00fbc5890e39c5b9ccf3828a39b767c88832c08",
+        "name": "El Universal",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "Ricardo Salinas Pliego",
-      "里卡多·萨利纳斯·普列戈",
-      "里卡多·萨利纳斯",
-      "Ricardo Salinas"
+      "Ricardo Salinas Pliego"
     ]
   },
   "ChatGPT移动应用": {
@@ -9441,6 +10053,25 @@
     ],
     "original_forms": [
       "президент Франции Эммануэль Макрон"
+    ]
+  },
+  "欧洲联盟": {
+    "first_seen": "2025-11-20T23:49:00+00:00",
+    "sources": [
+      {
+        "id": "ee5a260f97cef5b15f79b313d1e568ee9410f098",
+        "name": "Ведомости",
+        "url": ""
+      },
+      {
+        "id": "4404330ce80fb79f3da35177b2afe9a4d2ea079f",
+        "name": "Bloomberg.co.jp",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Европейский союз (ЕС)",
+      "欧州連合（EU）"
     ]
   },
   "Noble Securities": {
@@ -10031,12 +10662,15 @@
   },
   "台湾行政院": {
     "first_seen": "2025-12-19T13:58:00+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "f05aaf796647b6e830cee988a640ef53bbe736df",
+        "name": "경향신문",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "the premier",
-      "台湾地区行政机构负责人",
-      "대만 행정원",
-      "台湾行政院"
+      "대만 행정원"
     ]
   },
   "乌克兰国防部": {
@@ -10154,6 +10788,11 @@
         "id": "4ba6da18e32c95943d4819f3ccd36fa11c299ec0",
         "name": "enovosty.com",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
@@ -10189,6 +10828,25 @@
     ],
     "original_forms": [
       "2025 세계배드민턴연맹(BWF) 월드투어 파이널스"
+    ]
+  },
+  "日本央行": {
+    "first_seen": "2025-11-20T17:36:25+00:00",
+    "sources": [
+      {
+        "id": "cc31d8415795bf30e7a91c19bc58e23cc72fce2b",
+        "name": "21财经",
+        "url": ""
+      },
+      {
+        "id": "e8bf9091231a3af7c2ad3183fc955afe27fbdaf2",
+        "name": "CNA",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "日本央行",
+      "The Bank of Japan"
     ]
   },
   "日本": {
@@ -10694,13 +11352,21 @@
     ]
   },
   "日本银行": {
-    "first_seen": "2025-11-20T17:36:25+00:00",
-    "sources": [],
+    "first_seen": "2025-11-20T22:30:03+00:00",
+    "sources": [
+      {
+        "id": "b81332df1a5fd1af6a3885f58714ea60fe0008f6",
+        "name": "Reuters",
+        "url": ""
+      },
+      {
+        "id": "dbeb79ed0219252ef0e68bf87d936fd198099215",
+        "name": "ロイター",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "日銀",
-      "日本央行",
-      "The Bank of Japan",
-      "日本银行"
+      "日銀"
     ]
   },
   "植田和男": {
@@ -11328,32 +11994,55 @@
   },
   "美国总统特朗普": {
     "first_seen": "2025-11-20T15:44:45+00:00",
-    "sources": [],
+    "sources": [
+      {
+        "id": "f00802a05161f40c42e23fb899b0aad40fe683b2",
+        "name": "《超越新聞網》",
+        "url": ""
+      },
+      {
+        "id": "e0d4d2a1d22bc7540da4e36bd59bacc0d36de16c",
+        "name": "CNN Brasil",
+        "url": ""
+      },
+      {
+        "id": "a62f98cd59abcf8c8cfc64b5a85a4e3ae00de8b8",
+        "name": "RFI",
+        "url": ""
+      },
+      {
+        "id": "b12794af1d4efb2cd9243853c0f3b688f763f870",
+        "name": "CBS News",
+        "url": ""
+      },
+      {
+        "id": "d00e24d1c25a92f97d20b4c4b2811ad4f89513a4",
+        "name": "Spiegel",
+        "url": ""
+      },
+      {
+        "id": "f3780f60be899bee61858c94a1239136215886b6",
+        "name": "CNN en Español",
+        "url": ""
+      },
+      {
+        "id": "fbc590786293d534e157eb4b28204ffe18aabc6b",
+        "name": "加拿大乐活网",
+        "url": ""
+      },
+      {
+        "id": "b99ed8dc941fc71616980aa64a7e6d2723c57d1a",
+        "name": "联合早报",
+        "url": ""
+      }
+    ],
     "original_forms": [
-      "el presidente Donald Trump",
-      "Donald Trump",
-      "US-Präsident Trump",
-      "El presidente de Estados Unidos, Donald Trump",
-      "presidente Donald Trump",
-      "トランプ米大統領",
-      "美国总统 Donald Trump",
-      "U.S. President Donald Trump",
-      "presidente de Estados Unidos, Donald Trump",
-      "US President Donald Trump",
-      "US-Präsident Donald Trump",
-      "President Donald Trump",
-      "presidente degli Stati Uniti Donald Trump",
-      "特朗普",
-      "Trump",
-      "der neue Bürgermeister von New York, Zohran Mamdani",
+      "美国总统特朗普",
       "o presidente dos Estados Unidos, Donald Trump",
       "美国总统特朗普（Donald Trump）",
       "President Trump",
-      "Präsident Trump",
-      "美国总统特朗普",
-      "presidente estadounidense, Donald Trump",
-      "Le président américain Donald Trump",
-      "el presidente estadounidense Donald Trump"
+      "US-Präsident Trump",
+      "el presidente Donald Trump"
     ]
   },
   "H200人工智能芯片": {
@@ -11406,6 +12095,11 @@
         "id": "f6a19c2dd19ea4a9206a6d1ef24cacafbed58c11",
         "name": "UOL Notícias",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
@@ -11415,7 +12109,8 @@
       "gobierno de Estados Unidos",
       "Le gouvernement américain",
       "уряду США",
-      "Governo dos EUA"
+      "Governo dos EUA",
+      "Washington"
     ]
   },
   "华为昇腾系列芯片": {
@@ -11455,6 +12150,47 @@
     ],
     "original_forms": [
       "郭明華"
+    ]
+  },
+  "台湾地区": {
+    "first_seen": "2025-11-20T12:42:35+00:00",
+    "sources": [
+      {
+        "id": "a9511e476b8ce40217803f2145505c55f2c71c1e",
+        "name": "風傳媒",
+        "url": ""
+      },
+      {
+        "id": "3f8c223eae9bc32976f2f31e5ef6cd7aa356c97d",
+        "name": "The Straits Times",
+        "url": ""
+      },
+      {
+        "id": "5ef52f64a0970ddee935b9b440d4f4a820dbfb2b",
+        "name": "The Globe and Mail",
+        "url": ""
+      },
+      {
+        "id": "b1152948b2666f8d0c25b85e60f9f7d70db6fbb7",
+        "name": "한국일보",
+        "url": ""
+      },
+      {
+        "id": "f17b647a6f144f14126ea8f13b42f2395e1fb8d4",
+        "name": "财联社",
+        "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "台灣",
+      "Taiwan",
+      "대만",
+      "台湾"
     ]
   },
   "河南省": {
@@ -12252,10 +12988,16 @@
         "id": "b99ed8dc941fc71616980aa64a7e6d2723c57d1a",
         "name": "联合早报",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
-      "新华社"
+      "新华社",
+      "Xinhua"
     ]
   },
   "湖南队": {
@@ -13642,11 +14384,17 @@
         "id": "629e990f9e061b1484090875853de682b8f45294",
         "name": "Poder360",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
       "Departamento de Estado norte-americano",
-      "vice-secretário de Estado dos Estados Unidos"
+      "vice-secretário de Estado dos Estados Unidos",
+      "U.S. State Department"
     ]
   },
   "克里斯托弗·兰道": {
@@ -25794,10 +26542,16 @@
         "id": "3f8c223eae9bc32976f2f31e5ef6cd7aa356c97d",
         "name": "The Straits Times",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
-      "中国外交部"
+      "中国外交部",
+      "China's foreign ministry"
     ]
   },
   "日本内阁官房": {
@@ -29306,6 +30060,11 @@
       {
         "id": "f63db383dc8a3a47ff335b2b3e3f480b357967ff",
         "name": "Midi Libre",
+        "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
         "url": ""
       }
     ],
@@ -48097,6 +48856,11 @@
         "id": "4fbea20e5c7a07de1147aff030f4b2d8d810c368",
         "name": "新浪新闻_手机新浪网",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
@@ -48145,6 +48909,11 @@
       {
         "id": "c755a830c4168cb87e8b6f05df38a5200471e99f",
         "name": "证券时报",
+        "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
         "url": ""
       }
     ],
@@ -53905,11 +54674,17 @@
         "id": "cd8cefae9eeeec7c9d24d6b4a90292fc9725e8e5",
         "name": "ixbt.com",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
       "칭화대",
-      "Университета Цинхуа"
+      "Университета Цинхуа",
+      "清华大学"
     ]
   },
   "欧洲南方天文台": {
@@ -58661,10 +59436,16 @@
         "id": "907d31ecb1b2cc2a9435668df5034ac89e9030c2",
         "name": "Mirage News",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
-      "Cornell"
+      "Cornell",
+      "康奈尔大学"
     ]
   },
   "西尔维斯特综合癌症中心": {
@@ -69313,10 +70094,16 @@
         "id": "e163cf79a4cd17c5a47679791db9ad4546363cee",
         "name": "Revista Fórum",
         "url": ""
+      },
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
       }
     ],
     "original_forms": [
-      "University College London"
+      "University College London",
+      "伦敦大学学院"
     ]
   },
   "LungVax": {
@@ -82448,6 +83235,487 @@
     ],
     "original_forms": [
       "Nintendo eShop"
+    ]
+  },
+  "西孟加拉邦官员": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Bengal officials"
+    ]
+  },
+  "全国人民代表大会常务委员会": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Постоянный комитет Всекитайского собрания народных представителей"
+    ]
+  },
+  "国家发展改革委办公厅": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "国家发展改革委办公厅"
+    ]
+  },
+  "中国循环经济协会": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "中国循环经济协会"
+    ]
+  },
+  "刘翠玲": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "刘翠玲"
+    ]
+  },
+  "内蒙古鄂尔多斯蒙苏经济开发区": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "内蒙古鄂尔多斯蒙苏经济开发区"
+    ]
+  },
+  "江苏盐城大丰港经济开发区": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "盐城大丰港经济开发区"
+    ]
+  },
+  "全国总工会": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "全国总工会"
+    ]
+  },
+  "最高人民法院": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "最高人民法院"
+    ]
+  },
+  "最高人民检察院": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "最高人民检察院"
+    ]
+  },
+  "波音公司圣路易斯分部": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Boeing's St. Louis branch"
+    ]
+  },
+  "Anduril Industries": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Anduril Industries"
+    ]
+  },
+  "诺斯罗普·格鲁曼系统公司": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "Northrop Grumman Systems Corporation"
+    ]
+  },
+  "L3 Harris Maritime Services": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "L3 Harris Maritime Services"
+    ]
+  },
+  "中国海关总署": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "中国海关总署"
+    ]
+  },
+  "财讯传媒": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "财讯传媒"
+    ]
+  },
+  "谢金河": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "谢金河"
+    ]
+  },
+  "中国石油化工集团有限公司": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "中石化"
+    ]
+  },
+  "中国石化财务公司": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "财务公司"
+    ]
+  },
+  "中国石化审计中心": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "审计中心"
+    ]
+  },
+  "香港大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "港大"
+    ]
+  },
+  "新加坡国立大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "新加坡国立大学"
+    ]
+  },
+  "南洋理工大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "南洋理工大学"
+    ]
+  },
+  "复旦大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "复旦大学"
+    ]
+  },
+  "对外经济贸易大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "对外经济贸易大学"
+    ]
+  },
+  "河南财经政法大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "河南财经政法大学"
+    ]
+  },
+  "上海师范大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "上海师范大学"
+    ]
+  },
+  "石河子大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "石河子大学"
+    ]
+  },
+  "中国海洋大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "中国海洋大学"
+    ]
+  },
+  "中国石油大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "中国石油大学"
+    ]
+  },
+  "北京工商大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "北京工商大学"
+    ]
+  },
+  "北京工业大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "北京工业大学"
+    ]
+  },
+  "北京师范大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "北京师范大学"
+    ]
+  },
+  "哈尔滨工业大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "哈尔滨工业大学"
+    ]
+  },
+  "南京审计大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "南京审计大学"
+    ]
+  },
+  "同济大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "同济大学"
+    ]
+  },
+  "香港城市大学": {
+    "first_seen": "2025-12-27T05:00:00+00:00",
+    "sources": [
+      {
+        "id": "33d0a3a7c89029c17bc5891a549c4b21ec9309fc",
+        "name": "GDELT",
+        "url": ""
+      }
+    ],
+    "original_forms": [
+      "香港城市大学"
     ]
   }
 }

@@ -41,6 +41,7 @@ async def fetch_from_collector(
     limit: int = 10,
     from_: Optional[str] = None,
     to: Optional[str] = None,
+    extra: Optional[Dict[str, Any]] = None,
     nullable: Optional[str] = None,
     truncate: Optional[str] = None,
     sortby: Optional[str] = None,
@@ -95,6 +96,7 @@ async def fetch_from_collector(
             language=None,  # 使用 collector 默认语言
             from_date=from_date,
             to_date=to_date,
+            extra=extra or {},
         )
         logger.info(f"构建 FetchConfig 完成: {config}")
         
@@ -141,6 +143,7 @@ async def fetch_from_multiple_sources(
     limit: int = 10,
     from_: Optional[str] = None,
     to: Optional[str] = None,
+    extra: Optional[Dict[str, Any]] = None,
     nullable: Optional[str] = None,
     truncate: Optional[str] = None,
     sortby: Optional[str] = None,
@@ -178,6 +181,7 @@ async def fetch_from_multiple_sources(
                 limit=limit,
                 from_=from_,
                 to=to,
+                extra=extra,
                 nullable=nullable,
                 truncate=truncate,
                 sortby=sortby,

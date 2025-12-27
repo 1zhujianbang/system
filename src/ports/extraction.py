@@ -24,6 +24,7 @@ class NewsSourceType(str, Enum):
     SCRAPER = "scraper"
     LOCAL = "local"
     CUSTOM = "custom"
+    GDELT = "gdelt"
 
 
 @dataclass

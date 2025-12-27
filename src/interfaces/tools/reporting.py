@@ -50,3 +50,4 @@ async def generate_markdown_report(events_list: Any, title: str = "Market Analys
 
 
 
+
