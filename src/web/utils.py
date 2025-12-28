@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import pandas as pd
+import os
 from pathlib import Path
 from src.web.config import DATA_DIR
 # API配置现在通过ConfigManager获取
@@ -12,12 +13,28 @@ TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 # 临时原始新闻目录（Agent1 处理入口）
 RAW_NEWS_TMP_DIR = DATA_DIR / "tmp" / "raw_news"
 
+def _kg_store_backend() -> str:
+    v = str(os.getenv("KG_STORE_BACKEND") or "").strip().lower()
+    return v or "sqlite"
+
 def load_entities():
     """
-    直接从 SQLite 主存储读取实体数据（无缓存）
+    从配置的知识库存储读取实体数据（无缓存）
     """
+    backend = _kg_store_backend()
+    if backend in {"neo4j"}:
+        try:
+            from src.adapters.graph_store.neo4j_adapter import get_neo4j_store
+
+            data = get_neo4j_store().export_entities_json()
+            if isinstance(data, dict):
+                return data
+        except Exception as e:
+            st.error(f"Error loading entities from Neo4j: {e}")
+
     try:
         from src.adapters.sqlite.store import get_store
+
         store = get_store()
         data = store.export_entities_json()
         if isinstance(data, dict):
@@ -29,10 +46,22 @@ def load_entities():
 
 def load_events():
     """
-    直接从 SQLite 主存储读取事件数据（无缓存）
+    从配置的知识库存储读取事件数据（无缓存）
     """
+    backend = _kg_store_backend()
+    if backend in {"neo4j"}:
+        try:
+            from src.adapters.graph_store.neo4j_adapter import get_neo4j_store
+
+            data = get_neo4j_store().export_abstract_map_json()
+            if isinstance(data, dict):
+                return data
+        except Exception as e:
+            st.error(f"Error loading events from Neo4j: {e}")
+
     try:
         from src.adapters.sqlite.store import get_store
+
         store = get_store()
         data = store.export_abstract_map_json()
         if isinstance(data, dict):

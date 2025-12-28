@@ -10,6 +10,7 @@ import json
 import hashlib
 import re
 import html as html_std
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple, Optional
@@ -204,14 +205,14 @@ class GraphStyle:
                         f'<span data-event-type="{GraphStyle._escape_attr(t)}" '
                         f'style="background-color: #f3e5f5; color: #6a1b9a; padding: 2px 6px; border-radius: 4px; '
                         f'font-size: 11px; margin-right: 4px; display: inline-block; margin-bottom: 4px; '
-                        f'border: 1px solid #e1bee7; user-select: none;">{GraphStyle._wrap_text_html(t, width=25) or html_std.escape(t)}</span>'
+                        f'border: 1px solid #e1bee7; user-select: none;">{html_std.escape(t)}</span>'
                     )
                     for t in event_types
                 ]
             )
         else:
             type_badges = '<span style="color: #999; font-style: italic;">None</span>'
-        summary_display = GraphStyle._wrap_text_html(summary, width=25) or '<span style="color: #999; font-style: italic;">None</span>'
+        summary_display = html_std.escape(str(summary or "")) or '<span style="color: #999; font-style: italic;">None</span>'
 
         html = f"""
         <table style="font-family: Arial, sans-serif; border-collapse: collapse; width: 300px; background-color: white; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -274,7 +275,7 @@ class GraphStyle:
             rows += (
                 "<tr style=\"border-bottom: 1px solid #f1f3f5;\">"
                 f"<td style=\"padding: 6px 8px; width: 92px; color: #495057; font-size: 12px; vertical-align: top;\">{html_std.escape(str(time_display))}</td>"
-                f"<td style=\"padding: 6px 8px; color: #212529; font-size: 12px; line-height: 1.4;\">{GraphStyle._wrap_text_html(summary, width=25)}</td>"
+                f"<td style=\"padding: 6px 8px; color: #212529; font-size: 12px; line-height: 1.4;\">{html_std.escape(str(summary or ''))}</td>"
                 "</tr>"
             )
 
@@ -316,8 +317,8 @@ class GraphStyle:
             rows += (
                 "<tr style=\"border-bottom: 1px solid #f1f3f5;\">"
                 f"<td style=\"padding: 6px 8px; width: 92px; color: #495057; font-size: 12px; vertical-align: top;\">{html_std.escape(str(time_display))}</td>"
-                f"<td style=\"padding: 6px 8px; width: 92px; color: #6a1b9a; font-size: 12px; vertical-align: top;\">{GraphStyle._wrap_text_html(predicate, width=25)}</td>"
-                f"<td style=\"padding: 6px 8px; color: #212529; font-size: 12px; line-height: 1.4;\">{GraphStyle._wrap_text_html(summary, width=25)}</td>"
+                f"<td style=\"padding: 6px 8px; width: 92px; color: #6a1b9a; font-size: 12px; vertical-align: top;\">{html_std.escape(str(predicate or ''))}</td>"
+                f"<td style=\"padding: 6px 8px; color: #212529; font-size: 12px; line-height: 1.4;\">{html_std.escape(str(summary or ''))}</td>"
                 "</tr>"
             )
 
@@ -377,6 +378,14 @@ class GraphRenderer(ABC):
     
     def _get_kg_store(self):
         """获取知识图谱存储实例"""
+        backend = str(os.getenv("KG_STORE_BACKEND") or "").strip().lower() or "sqlite"
+        if backend == "neo4j":
+            try:
+                from src.adapters.graph_store.neo4j_adapter import get_neo4j_store
+
+                return get_neo4j_store()
+            except Exception:
+                pass
         from src.adapters.sqlite.kg_read_store import SQLiteKGReadStore
         return SQLiteKGReadStore()
     
@@ -1514,14 +1523,14 @@ class EntityRelationGraphRenderer(GraphRenderer):
             co_occurrence = rel["co_occurrence"]
             
             # 颜色映射
-            if co_occurrence >= 5:
+            if co_occurrence >= 20:
                 color = GraphStyle.COLOR_RELATION_STRONG
-            elif co_occurrence >= 3:
+            elif co_occurrence >= 10:
                 color = GraphStyle.COLOR_RELATION_MEDIUM
             else:
                 color = GraphStyle.COLOR_RELATION_WEAK
             
-            width = min(co_occurrence, 8)
+            width = min(co_occurrence / 10 + 1, 5)
 
             abs_list = []
             raw_events = rel.get("events")
@@ -1626,9 +1635,9 @@ class EntityRelationGraphRenderer(GraphRenderer):
         with st.expander("🎨 图例说明"):
             st.markdown(f"""
             **边颜色**：
-            - <span style='color:{GraphStyle.COLOR_RELATION_STRONG}'>●</span> 强关系（共现 ≥ 5 次）
-            - <span style='color:{GraphStyle.COLOR_RELATION_MEDIUM}'>●</span> 中等关系（共现 3-4 次）
-            - <span style='color:{GraphStyle.COLOR_RELATION_WEAK}'>●</span> 弱关系（共现 2 次）
+            - <span style='color:{GraphStyle.COLOR_RELATION_STRONG}'>●</span> 强关系（共现 ≥ 20 次）
+            - <span style='color:{GraphStyle.COLOR_RELATION_MEDIUM}'>●</span> 中等关系（共现 10-20 次）
+            - <span style='color:{GraphStyle.COLOR_RELATION_WEAK}'>●</span> 弱关系（共现 ≤ 10 次）
             - <span style='color:#ff9800'>●</span> 实体关系（三元组，虚线带箭头）
             
             **边宽度**：表示关系强度

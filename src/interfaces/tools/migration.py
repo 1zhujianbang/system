@@ -6,12 +6,12 @@ from __future__ import annotations
 import json
 import hashlib
 import sqlite3
-from typing import Any, Dict
+from typing import Any, Dict, List
 from datetime import datetime, timezone
 
 from ...infra.registry import register_tool
 from ...utils.tool_function import tools as Tools
-from ...storage.sqlite_store import get_store
+from ...adapters.sqlite.store import get_store
 
 
 _tools = Tools()
@@ -181,6 +181,88 @@ def backfill_mentions(limit_entities: int = 0, limit_events: int = 0) -> Dict[st
             }
         finally:
             conn.close()
+
+
+@register_tool(
+    name="migrate_sqlite_to_neo4j",
+    description="一次性迁移：从 SQLite 主存储导入 Neo4j（entities/events/participants/relations）",
+    category="Storage",
+)
+def migrate_sqlite_to_neo4j(batch_size: int = 200) -> Dict[str, Any]:
+    sqlite_store = get_store()
+    try:
+        from ...adapters.graph_store.neo4j_adapter import get_neo4j_store
+    except Exception as e:
+        return {"status": "error", "message": f"Neo4j adapter unavailable: {e}"}
+
+    neo = get_neo4j_store()
+
+    entities = sqlite_store.export_entities_json() or {}
+    abstract_map = sqlite_store.export_abstract_map_json() or {}
+
+    ent_items = [(k, v) for k, v in (entities or {}).items() if isinstance(k, str) and isinstance(v, dict)]
+    evt_items = [(k, v) for k, v in (abstract_map or {}).items() if isinstance(k, str) and isinstance(v, dict)]
+
+    ent_done = 0
+    for i in range(0, len(ent_items), int(batch_size)):
+        chunk = ent_items[i : i + int(batch_size)]
+        names: List[str] = []
+        originals: List[str] = []
+        src = "migrated"
+        ts = None
+        for name, data in chunk:
+            names.append(name)
+            of = data.get("original_forms", [])
+            if isinstance(of, list) and of:
+                originals.append(str(of[0] or name))
+            else:
+                originals.append(name)
+            if src == "migrated":
+                sources = data.get("sources", [])
+                if isinstance(sources, list) and sources:
+                    src = sources[0]
+            if ts is None:
+                ts = str(data.get("first_seen") or "").strip() or None
+        neo.upsert_entities(names, originals, source=src, reported_at=ts)
+        ent_done += len(chunk)
+
+    evt_done = 0
+    for i in range(0, len(evt_items), int(batch_size)):
+        chunk = evt_items[i : i + int(batch_size)]
+        events_list: List[Dict[str, Any]] = []
+        src = "migrated"
+        ts = None
+        for abstract, data in chunk:
+            events_list.append(
+                {
+                    "abstract": abstract,
+                    "event_summary": data.get("event_summary", ""),
+                    "event_types": data.get("event_types", []),
+                    "entities": data.get("entities", []),
+                    "entity_roles": data.get("entity_roles", {}),
+                    "relations": data.get("relations", []),
+                    "event_start_time": data.get("event_start_time", ""),
+                    "event_start_time_text": data.get("event_start_time_text", ""),
+                    "event_start_time_precision": data.get("event_start_time_precision", "unknown"),
+                }
+            )
+            if src == "migrated":
+                sources = data.get("sources", [])
+                if isinstance(sources, list) and sources:
+                    src = sources[0]
+            if ts is None:
+                ts = str(data.get("reported_at") or data.get("first_seen") or "").strip() or None
+
+        neo.upsert_events(events_list, source=src, reported_at=ts)
+        evt_done += len(chunk)
+
+    return {
+        "status": "success",
+        "entities_migrated": ent_done,
+        "events_migrated": evt_done,
+        "neo4j_uri": getattr(neo, "_uri", ""),
+        "neo4j_database": getattr(neo, "_database", None),
+    }
 
 
 

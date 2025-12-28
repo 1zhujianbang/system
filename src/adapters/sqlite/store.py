@@ -918,7 +918,19 @@ class SQLiteStore:
             conn = self._connect()
             try:
                 out: Dict[str, Any] = {}
-                rows = conn.execute("SELECT name, first_seen, sources_json, original_forms_json FROM entities").fetchall()
+                rows = conn.execute(
+                    """
+                    SELECT
+                        e.name AS name,
+                        e.first_seen AS first_seen,
+                        e.sources_json AS sources_json,
+                        e.original_forms_json AS original_forms_json,
+                        COUNT(DISTINCT p.event_id) AS count
+                    FROM entities e
+                    LEFT JOIN participants p ON p.entity_id = e.entity_id
+                    GROUP BY e.entity_id
+                    """
+                ).fetchall()
                 for r in rows:
                     name = str(r["name"])
                     try:
@@ -935,6 +947,7 @@ class SQLiteStore:
                         "first_seen": str(r["first_seen"] or ""),
                         "sources": sources,
                         "original_forms": [x for x in forms if isinstance(x, str) and x.strip()],
+                        "count": int(r["count"] or 0),
                     }
                 return out
             finally:

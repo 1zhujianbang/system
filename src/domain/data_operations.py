@@ -9,12 +9,17 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Union, Optional
+import os
 
 from ..infra.file_utils import ensure_dir
 from ..infra.paths import tools as Tools
 
 # 实例化tools
 _tools = Tools()
+
+def _kg_store_backend() -> str:
+    v = str(os.getenv("KG_STORE_BACKEND") or "").strip().lower()
+    return v or "sqlite"
 
 
 def write_jsonl_file(file_path: Path, data: List[Dict[str, Any]], ensure_ascii: bool = False) -> None:
@@ -245,15 +250,29 @@ def update_entities(entities: List[str], entities_original: List[str], source: s
         _tools.log("实体列表和原始表述列表长度不匹配")
         return False
 
-    # 写入 SQLite（主存储）
-    try:
-        from src.adapters.sqlite.store import get_store
-        store = get_store()
-        store.upsert_entities(entities, entities_original, source=source, reported_at=published_at)
-        return True
-    except Exception as e:
-        _tools.log(f"SQLite实体写入失败: {e}")
-        return False
+    backend = _kg_store_backend()
+    wrote_any = False
+
+    if backend in {"neo4j", "dual"}:
+        try:
+            from src.adapters.graph_store.neo4j_adapter import get_neo4j_store
+
+            get_neo4j_store().upsert_entities(entities, entities_original, source=source, reported_at=published_at)
+            wrote_any = True
+        except Exception as e:
+            _tools.log(f"Neo4j实体写入失败: {e}")
+
+    if backend in {"sqlite", "dual"} or not wrote_any:
+        try:
+            from src.adapters.sqlite.store import get_store
+
+            store = get_store()
+            store.upsert_entities(entities, entities_original, source=source, reported_at=published_at)
+            wrote_any = True
+        except Exception as e:
+            _tools.log(f"SQLite实体写入失败: {e}")
+
+    return wrote_any
 
 def update_abstract_map(extracted_list: List[Dict[str, Any]], source: str, published_at: Optional[str] = None) -> bool:
     """
@@ -267,15 +286,29 @@ def update_abstract_map(extracted_list: List[Dict[str, Any]], source: str, publi
     Returns:
         是否有数据更新
     """
-    # 写入 SQLite（主存储）
-    try:
-        from src.adapters.sqlite.store import get_store
-        store = get_store()
-        store.upsert_events(extracted_list, source=source, reported_at=published_at)
-        return True
-    except Exception as e:
-        _tools.log(f"SQLite事件写入失败: {e}")
-        return False
+    backend = _kg_store_backend()
+    wrote_any = False
+
+    if backend in {"neo4j", "dual"}:
+        try:
+            from src.adapters.graph_store.neo4j_adapter import get_neo4j_store
+
+            get_neo4j_store().upsert_events(extracted_list, source=source, reported_at=published_at)
+            wrote_any = True
+        except Exception as e:
+            _tools.log(f"Neo4j事件写入失败: {e}")
+
+    if backend in {"sqlite", "dual"} or not wrote_any:
+        try:
+            from src.adapters.sqlite.store import get_store
+
+            store = get_store()
+            store.upsert_events(extracted_list, source=source, reported_at=published_at)
+            wrote_any = True
+        except Exception as e:
+            _tools.log(f"SQLite事件写入失败: {e}")
+
+    return wrote_any
 
 # =============================================================================
 # 高级数据操作函数

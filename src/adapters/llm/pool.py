@@ -101,7 +101,29 @@ class DefaultLLMPool(LLMClientPool):
                     # 获取配置项
                     name = config.get("name", f"llm-client-{i}")
                     api_key = config.get("api_key", "")
-                    base_url = config.get("base_url", "https://api.openai.com/v1")
+                    provider_raw = (
+                        config.get("provider")
+                        or config.get("provider_type")
+                        or config.get("providerType")
+                        or config.get("type")
+                        or ""
+                    )
+                    provider_str = str(provider_raw or "").strip().lower()
+                    if provider_str in ("ollama", "local"):
+                        provider_type = LLMProviderType.LOCAL
+                    else:
+                        try:
+                            provider_type = LLMProviderType(provider_str) if provider_str else LLMProviderType.OPENAI
+                        except Exception:
+                            provider_type = LLMProviderType.OPENAI
+
+                    base_url = config.get("base_url", "")
+                    if not isinstance(base_url, str):
+                        base_url = ""
+                    base_url = base_url.strip()
+                    if not base_url:
+                        base_url = "http://localhost:11434/v1" if provider_type == LLMProviderType.LOCAL else "https://api.openai.com/v1"
+
                     model = config.get("model", "gpt-3.5-turbo")
                     enabled = config.get("enabled", True)
                     
@@ -112,12 +134,15 @@ class DefaultLLMPool(LLMClientPool):
                         
                     # 检查API密钥
                     if not api_key:
-                        self.logger.warning(f"[LLM] 客户端 {name} 缺少API密钥")
-                        continue
+                        if provider_type == LLMProviderType.LOCAL:
+                            api_key = "ollama"
+                        else:
+                            self.logger.warning(f"[LLM] 客户端 {name} 缺少API密钥")
+                            continue
                     
                     # 注册客户端
-                    if self.register_openai_client(name, api_key, base_url, model):
-                        self.logger.info(f"[LLM] 成功注册OpenAI客户端: {name} (model: {model}, base_url: {base_url})")
+                    if self.register_openai_client(name, api_key, base_url, model, provider_type=provider_type):
+                        self.logger.info(f"[LLM] 成功注册客户端: {name} (provider: {provider_type.value}, model: {model}, base_url: {base_url})")
                     else:
                         self.logger.error(f"[LLM] 注册OpenAI客户端失败: {name}")
                         

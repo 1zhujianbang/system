@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import os
 
 from ..infra.paths import tools as Tools
 from ..ports.kg_read_store import KGReadStore
@@ -51,7 +52,19 @@ class SnapshotService:
     def __init__(self, *, db_path: Optional[Path] = None, out_dir: Optional[Path] = None, store: Optional[KGReadStore] = None):
         self.db_path = db_path or _tools.SQLITE_DB_FILE
         self.out_dir = out_dir or _tools.SNAPSHOTS_DIR
-        self.store: KGReadStore = store or SQLiteKGReadStore(self.db_path)
+        if store is not None:
+            self.store = store
+        else:
+            backend = str(os.getenv("KG_STORE_BACKEND") or "").strip().lower() or "sqlite"
+            if backend == "neo4j":
+                try:
+                    from ..adapters.graph_store.neo4j_adapter import get_neo4j_store
+
+                    self.store = get_neo4j_store()
+                except Exception:
+                    self.store = SQLiteKGReadStore(self.db_path)
+            else:
+                self.store = SQLiteKGReadStore(self.db_path)
 
     def _normalize_node(self, n: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not isinstance(n, dict):
