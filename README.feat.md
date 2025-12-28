@@ -1,6 +1,7 @@
 # MarketLens feat branch update
 
 `feat`分支的当前版本主要更新了以下内容：
+
 v1.4
 
 - Neo4j 迁移与验证工具：新增 `migrate_sqlite_to_neo4j` 工具与连接/迁移脚本
