@@ -382,75 +382,191 @@ class SnapshotService:
         nodes2 = [v for k, v in nodes.items() if k in top]
         return self._wrap_snapshot("EE", nodes2, edges2, params)
 
-    def build_ee_evo(self, rows_entities: List[Dict[str, Any]], rows_rels: List[Dict[str, Any]], params: SnapshotParams) -> Dict[str, Any]:
-        entid_to_name, _ = self._load_entity_map_from_rows(rows_entities)
+    def build_ee_evo(
+        self,
+        rows_entities: List[Dict[str, Any]],
+        rows_relation_states: List[Dict[str, Any]],
+        rows_rels: List[Dict[str, Any]],
+        params: SnapshotParams,
+    ) -> Dict[str, Any]:
+        entid_to_name, name_to_ent = self._load_entity_map_from_rows(rows_entities)
 
-        groups: Dict[Tuple[str, str, str], List[Tuple[str, List[str]]]] = {}
-        for r in rows_rels:
-            s = entid_to_name.get(str(r.get("subject_entity_id")), "")
-            o = entid_to_name.get(str(r.get("object_entity_id")), "")
-            p = str(r.get("predicate") or "").strip()
-            t = str(r.get("time") or "").strip() or _utc_now_iso()
-            if not s or not o or not p:
-                continue
-            if not self._filter_by_days_window(t, params.days_window):
-                continue
-            ev_list: List[str] = []
-            try:
-                ev = json.loads(r.get("evidence_json") or "[]")
-                if isinstance(ev, list):
-                    ev_list = [x.strip() for x in ev if isinstance(x, str) and x.strip()]
-            except Exception:
-                ev_list = []
-            groups.setdefault((s, p, o), []).append((t, ev_list))
+        items: List[Dict[str, Any]] = []
+        if rows_relation_states:
+            for r in rows_relation_states:
+                s_id = str(r.get("subject_entity_id") or "").strip()
+                o_id = str(r.get("object_entity_id") or "").strip()
+                s = entid_to_name.get(s_id, "")
+                o = entid_to_name.get(o_id, "")
+                p = str(r.get("predicate") or "").strip()
+                valid_from = str(r.get("valid_from") or "").strip() or _utc_now_iso()
+                valid_to = str(r.get("valid_to") or "").strip()
+                relation_kind = str(r.get("relation_kind") or "").strip()
+                if not s or not o or not p:
+                    continue
+                if not self._filter_by_days_window(valid_from, params.days_window):
+                    continue
+
+                evidence_out: List[str] = []
+                try:
+                    ev = json.loads(r.get("evidence_json") or "[]")
+                    if not isinstance(ev, list):
+                        ev = []
+                except Exception:
+                    ev = []
+                for x in ev:
+                    if isinstance(x, str) and x.strip():
+                        v = x.strip()
+                    elif isinstance(x, dict):
+                        v = str(x.get("quote") or x.get("text") or x.get("mention_id") or "").strip()
+                    else:
+                        v = ""
+                    if v and v not in evidence_out:
+                        evidence_out.append(v)
+                    if len(evidence_out) >= 5:
+                        break
+
+                rel_state_id = str(r.get("relation_state_id") or "").strip()
+                if not rel_state_id:
+                    rel_state_id = f"RELSTATE:{s}|{p}|{o}|{valid_from}|{valid_to}"
+
+                items.append(
+                    {
+                        "id": rel_state_id,
+                        "s": s,
+                        "o": o,
+                        "s_id": s_id,
+                        "o_id": o_id,
+                        "p": p,
+                        "valid_from": valid_from,
+                        "valid_to": valid_to,
+                        "state_text": str(r.get("state_text") or "").strip(),
+                        "evidence": evidence_out,
+                        "relation_kind": relation_kind,
+                    }
+                )
+        else:
+            groups: Dict[Tuple[str, str, str], List[Tuple[str, List[str]]]] = {}
+            for r in rows_rels:
+                s = entid_to_name.get(str(r.get("subject_entity_id")), "")
+                o = entid_to_name.get(str(r.get("object_entity_id")), "")
+                p = str(r.get("predicate") or "").strip()
+                t = str(r.get("time") or "").strip() or _utc_now_iso()
+                if not s or not o or not p:
+                    continue
+                if not self._filter_by_days_window(t, params.days_window):
+                    continue
+                ev_list: List[str] = []
+                try:
+                    ev = json.loads(r.get("evidence_json") or "[]")
+                    if isinstance(ev, list):
+                        ev_list = [x.strip() for x in ev if isinstance(x, str) and x.strip()]
+                except Exception:
+                    ev_list = []
+                groups.setdefault((s, p, o), []).append((t, ev_list))
+
+            gap = timedelta(days=int(params.gap_days))
+            for (s, p, o), seq in groups.items():
+                seq2 = sorted(seq, key=lambda x: x[0])
+                intervals: List[List[Tuple[str, List[str]]]] = []
+                cur: List[Tuple[str, List[str]]] = []
+                last_dt: Optional[datetime] = None
+                for t, evs in seq2:
+                    dt = _parse_iso(t)
+                    if last_dt and dt and (dt - last_dt) > gap and cur:
+                        intervals.append(cur)
+                        cur = []
+                    cur.append((t, evs))
+                    last_dt = dt or last_dt
+                if cur:
+                    intervals.append(cur)
+
+                for idx, itv in enumerate(intervals):
+                    t0 = itv[0][0]
+                    t1 = itv[-1][0]
+                    rel_id = f"REL:{s}|{p}|{o}|{idx}"
+                    evs_flat: List[str] = []
+                    for _, evs in itv:
+                        for e in evs:
+                            if e not in evs_flat:
+                                evs_flat.append(e)
+                    items.append(
+                        {
+                            "id": rel_id,
+                            "s": s,
+                            "o": o,
+                            "s_id": str(name_to_ent.get(s, {}).get("entity_id") or ""),
+                            "o_id": str(name_to_ent.get(o, {}).get("entity_id") or ""),
+                            "p": p,
+                            "valid_from": t0,
+                            "valid_to": t1,
+                            "state_text": "",
+                            "evidence": evs_flat[:5],
+                            "relation_kind": "state",
+                        }
+                    )
+
+        deg: Dict[str, int] = {}
+        for it in items:
+            deg[it["s"]] = deg.get(it["s"], 0) + 1
+            deg[it["o"]] = deg.get(it["o"], 0) + 1
+        top = set(sorted(deg, key=deg.get, reverse=True)[: params.top_entities])
 
         nodes: Dict[str, Dict[str, Any]] = {}
         edges: List[Dict[str, Any]] = []
 
-        gap = timedelta(days=int(params.gap_days))
-        for (s, p, o), seq in groups.items():
-            seq2 = sorted(seq, key=lambda x: x[0])
-            intervals: List[List[Tuple[str, List[str]]]] = []
-            cur: List[Tuple[str, List[str]]] = []
-            last_dt: Optional[datetime] = None
-            for t, evs in seq2:
-                dt = _parse_iso(t)
-                if last_dt and dt and (dt - last_dt) > gap and cur:
-                    intervals.append(cur)
-                    cur = []
-                cur.append((t, evs))
-                last_dt = dt or last_dt
-            if cur:
-                intervals.append(cur)
+        for it in items:
+            s = it["s"]
+            o = it["o"]
+            if s not in top or o not in top:
+                continue
 
-            nodes.setdefault(s, {"id": s, "label": s, "type": "entity", "color": "#1f77b4"})
-            nodes.setdefault(o, {"id": o, "label": o, "type": "entity", "color": "#1f77b4"})
+            if s not in nodes:
+                ent = name_to_ent.get(s) or {}
+                nodes[s] = {
+                    "id": s,
+                    "label": s,
+                    "type": "entity",
+                    "color": "#1f77b4",
+                    "entity_id": str(ent.get("entity_id") or ""),
+                    "first_seen": str(ent.get("first_seen") or ""),
+                }
+            if o not in nodes:
+                ent = name_to_ent.get(o) or {}
+                nodes[o] = {
+                    "id": o,
+                    "label": o,
+                    "type": "entity",
+                    "color": "#1f77b4",
+                    "entity_id": str(ent.get("entity_id") or ""),
+                    "first_seen": str(ent.get("first_seen") or ""),
+                }
 
-            for idx, itv in enumerate(intervals):
-                t0 = itv[0][0]
-                t1 = itv[-1][0]
-                rel_id = f"REL:{s}|{p}|{o}|{idx}"
-                evs_flat: List[str] = []
-                for _, evs in itv:
-                    for e in evs:
-                        if e not in evs_flat:
-                            evs_flat.append(e)
+            rel_id = it["id"]
+            if rel_id not in nodes:
                 nodes[rel_id] = {
                     "id": rel_id,
-                    "label": p,
+                    "label": it["p"],
                     "type": "relation_state",
                     "color": "#999999",
-                    "time": t0,
-                    "valid_from": t0,
-                    "valid_to": t1,
-                    "evidence": evs_flat[:5],
+                    "time": it["valid_from"],
+                    "valid_from": it["valid_from"],
+                    "valid_to": it["valid_to"],
+                    "interval_start": it["valid_from"],
+                    "interval_end": it["valid_to"],
+                    "predicate": it["p"],
+                    "subject_entity_id": it["s_id"],
+                    "object_entity_id": it["o_id"],
+                    "state_text": it["state_text"],
+                    "evidence": (it.get("evidence") or [])[:5],
+                    "relation_kind": str(it.get("relation_kind") or "").strip() or "state",
                 }
-                edges.append({"from": s, "to": rel_id, "type": "rel_in", "title": "rel", "time": t0})
-                edges.append({"from": rel_id, "to": o, "type": "rel_out", "title": "rel", "time": t0})
+            edges.append({"from": s, "to": rel_id, "type": "rel_in", "title": it["p"], "time": it["valid_from"]})
+            edges.append({"from": rel_id, "to": o, "type": "rel_out", "title": it["p"], "time": it["valid_from"]})
+            if len(edges) >= int(params.max_edges):
+                break
 
-        nodes2 = list(nodes.values())[: params.top_entities + params.top_events]
-        edges2 = edges[: params.max_edges]
-        return self._wrap_snapshot("EE_EVO", nodes2, edges2, params)
+        return self._wrap_snapshot("EE_EVO", list(nodes.values()), edges[: params.max_edges], params)
 
     def build_event_evo(self, rows_entities: List[Dict[str, Any]], rows_events: List[Dict[str, Any]], rows_edges: List[Dict[str, Any]], rows_parts: List[Dict[str, Any]], params: SnapshotParams) -> Dict[str, Any]:
         entid_to_name, _ = self._load_entity_map_from_rows(rows_entities)
@@ -537,12 +653,16 @@ class SnapshotService:
         rows_events = self.store.fetch_events()
         rows_parts = self.store.fetch_participants_with_events()
         rows_rels = self.store.fetch_relations()
+        try:
+            rows_rel_states = self.store.fetch_relation_states()
+        except Exception:
+            rows_rel_states = []
         rows_edges = self.store.fetch_event_edges()
 
         ge = self.build_ge(rows_entities, rows_events, rows_parts, params)
         get = self.build_get(rows_entities, rows_events, rows_parts, params)
         ee = self.build_ee(rows_entities, rows_rels, params)
-        ee_evo = self.build_ee_evo(rows_entities, rows_rels, params)
+        ee_evo = self.build_ee_evo(rows_entities, rows_rel_states, rows_rels, params)
         event_evo = self.build_event_evo(rows_entities, rows_events, rows_edges, rows_parts, params)
 
         paths = {}

@@ -106,7 +106,7 @@ class GraphStore(ABC):
 
 1.  **配置环境**: 确保 `docker-compose.yml` 中的 Neo4j 正常运行，并配置 APOC 插件（可选，但推荐）。
 2.  **开发适配器**: 实现 `Neo4jAdapter`。
-3.  **开发迁移脚本**: `scripts/migrate_sqlite_to_neo4j.py`。
+3.  **开发迁移工具**: `src/interfaces/tools/migration.py:migrate_sqlite_to_neo4j`（从 SQLite 主存储导入 Neo4j）。
 4.  **执行迁移**: 在测试环境运行并验证。
 
 ## 6. 本体设计 (初步)

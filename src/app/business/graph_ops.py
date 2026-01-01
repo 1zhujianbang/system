@@ -560,6 +560,11 @@ class KnowledgeGraph:
                     "reported_at": data.get("reported_at", ""),
                     "sources": data.get("sources", []),
                     "first_seen": data.get("first_seen", ""),
+                    "last_seen": data.get("last_seen", ""),
+                    "entity_count": data.get("entity_count", 0),
+                    "relation_count": data.get("relation_count", 0),
+                    "source_count": data.get("source_count", 0),
+                    "internal_num_mentions": data.get("internal_num_mentions", 0),
                 }
                 for abstract, data in (abstract_map or {}).items()
                 if isinstance(abstract, str) and isinstance(data, dict)

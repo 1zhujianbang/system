@@ -64,8 +64,40 @@ class SQLiteKGReadStore(KGReadStore):
         conn = self._connect()
         try:
             rows = conn.execute(
-                "SELECT subject_entity_id, predicate, object_entity_id, time, evidence_json FROM relations"
+                "SELECT subject_entity_id, predicate, object_entity_id, relation_kind, time, evidence_json FROM relations"
             ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+    def fetch_relation_states(self) -> List[Dict[str, Any]]:
+        conn = self._connect()
+        try:
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        relation_state_id,
+                        subject_entity_id,
+                        predicate,
+                        object_entity_id,
+                        relation_kind,
+                        valid_from,
+                        valid_to,
+                        state_text,
+                        evidence_json,
+                        algorithm,
+                        revision,
+                        is_default,
+                        created_at,
+                        updated_at
+                    FROM relation_states
+                    WHERE is_default=1
+                    ORDER BY valid_from ASC
+                    """
+                ).fetchall()
+            except sqlite3.OperationalError:
+                return []
             return [dict(r) for r in rows]
         finally:
             conn.close()

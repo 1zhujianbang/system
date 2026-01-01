@@ -99,6 +99,57 @@ def _choose_event_time(event_start_time: str, reported_at: str, first_seen: str)
     return t or _utc_now_iso()
 
 
+def _norm_relation_kind(v: Any) -> str:
+    s = str(v or "").strip().lower()
+    if not s:
+        return ""
+    if s in {"state", "static", "persistent", "stative", "status"}:
+        return "state"
+    if s in {"event", "dynamic", "action", "incident"}:
+        return "event"
+    if s in {"静态", "状态", "持续", "事实"}:
+        return "state"
+    if s in {"动态", "事件", "动作", "言语", "一次"}:
+        return "event"
+    return ""
+
+
+def _infer_relation_kind(predicate: str) -> str:
+    p = str(predicate or "").strip()
+    if not p:
+        return ""
+    eventive = (
+        "指责",
+        "警告",
+        "宣布",
+        "否认",
+        "回应",
+        "制裁",
+        "起诉",
+        "逮捕",
+        "调查",
+        "袭击",
+        "攻击",
+        "签署",
+        "批准",
+        "通过",
+        "驳回",
+        "解雇",
+        "任命",
+        "收购",
+        "合作",
+        "谈判",
+        "会见",
+        "访问",
+        "驱逐",
+        "抗议",
+    )
+    for kw in eventive:
+        if kw and kw in p:
+            return "event"
+    return "state"
+
+
 @dataclass(frozen=True)
 class SQLiteStoreConfig:
     db_path: Path
@@ -111,7 +162,7 @@ class SQLiteStore:
     - participants/relations 为“带时间的元组”（强制 time 字段非空）
     """
 
-    SCHEMA_VERSION = "2"
+    SCHEMA_VERSION = "4"
 
     def __init__(self, config: Optional[SQLiteStoreConfig] = None):
         self.config = config or SQLiteStoreConfig(db_path=_tools.SQLITE_DB_FILE)
@@ -180,6 +231,7 @@ class SQLiteStore:
                         subject_entity_id TEXT NOT NULL,
                         predicate TEXT NOT NULL,
                         object_entity_id TEXT NOT NULL,
+                        relation_kind TEXT NOT NULL DEFAULT '',
                         time TEXT NOT NULL,
                         reported_at TEXT NOT NULL,
                         evidence_json TEXT NOT NULL,
@@ -192,6 +244,28 @@ class SQLiteStore:
                     CREATE INDEX IF NOT EXISTS idx_participants_time ON participants(time);
                     CREATE INDEX IF NOT EXISTS idx_relations_time ON relations(time);
                     CREATE INDEX IF NOT EXISTS idx_events_first_seen ON events(first_seen);
+
+                    CREATE TABLE IF NOT EXISTS relation_states (
+                        relation_state_id TEXT PRIMARY KEY,
+                        subject_entity_id TEXT NOT NULL,
+                        predicate TEXT NOT NULL,
+                        object_entity_id TEXT NOT NULL,
+                        relation_kind TEXT NOT NULL DEFAULT '',
+                        valid_from TEXT NOT NULL,
+                        valid_to TEXT NOT NULL DEFAULT '',
+                        state_text TEXT NOT NULL,
+                        evidence_json TEXT NOT NULL DEFAULT '[]',
+                        algorithm TEXT NOT NULL DEFAULT '',
+                        revision INTEGER NOT NULL DEFAULT 0,
+                        is_default INTEGER NOT NULL DEFAULT 0,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        UNIQUE(subject_entity_id, predicate, object_entity_id, valid_from, valid_to, revision),
+                        FOREIGN KEY(subject_entity_id) REFERENCES entities(entity_id) ON DELETE CASCADE,
+                        FOREIGN KEY(object_entity_id) REFERENCES entities(entity_id) ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_relation_states_triple_from ON relation_states(subject_entity_id, predicate, object_entity_id, valid_from);
+                    CREATE INDEX IF NOT EXISTS idx_relation_states_updated ON relation_states(updated_at);
 
                     -- =========================
                     -- Mention-first (审计层：先落 mention，再 resolve 到 canonical)
@@ -315,6 +389,41 @@ class SQLiteStore:
                     );
                     CREATE INDEX IF NOT EXISTS idx_event_edges_time ON event_edges(time);
 
+                    CREATE TABLE IF NOT EXISTS event_signals (
+                        event_id TEXT PRIMARY KEY,
+                        sql_date TEXT NOT NULL DEFAULT '',
+                        goldstein_scale REAL,
+                        num_mentions INTEGER,
+                        event_code TEXT NOT NULL DEFAULT '',
+                        quad_class INTEGER,
+                        avg_tone REAL,
+                        source_json TEXT NOT NULL DEFAULT '{}',
+                        confidence REAL NOT NULL DEFAULT 0.0,
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY(event_id) REFERENCES events(event_id) ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_event_signals_sql_date ON event_signals(sql_date);
+                    CREATE INDEX IF NOT EXISTS idx_event_signals_updated_at ON event_signals(updated_at);
+
+                    CREATE TABLE IF NOT EXISTS event_observations (
+                        observation_id TEXT PRIMARY KEY,
+                        event_id TEXT NOT NULL,
+                        field TEXT NOT NULL,
+                        value_text TEXT NOT NULL DEFAULT '',
+                        value_json TEXT NOT NULL DEFAULT '{}',
+                        evidence_json TEXT NOT NULL DEFAULT '[]',
+                        model_name TEXT NOT NULL DEFAULT '',
+                        model_version TEXT NOT NULL DEFAULT '',
+                        algorithm TEXT NOT NULL DEFAULT '',
+                        revision INTEGER NOT NULL DEFAULT 0,
+                        is_default INTEGER NOT NULL DEFAULT 0,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY(event_id) REFERENCES events(event_id) ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_event_observations_event_field ON event_observations(event_id, field);
+                    CREATE INDEX IF NOT EXISTS idx_event_observations_event_updated ON event_observations(event_id, updated_at);
+
                     -- =========================
                     -- Schema Migrations (版本管理)
                     -- =========================
@@ -354,6 +463,15 @@ class SQLiteStore:
                     CREATE INDEX IF NOT EXISTS idx_news_event_mapping_created_at ON news_event_mapping(created_at);
                     """
                 )
+
+                cols_rel = {str(r["name"]) for r in conn.execute("PRAGMA table_info(relations)").fetchall() or []}
+                if "relation_kind" not in cols_rel:
+                    conn.execute("ALTER TABLE relations ADD COLUMN relation_kind TEXT NOT NULL DEFAULT ''")
+
+                cols_rs = {str(r["name"]) for r in conn.execute("PRAGMA table_info(relation_states)").fetchall() or []}
+                if "relation_kind" not in cols_rs:
+                    conn.execute("ALTER TABLE relation_states ADD COLUMN relation_kind TEXT NOT NULL DEFAULT ''")
+
                 conn.execute(
                     "INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)",
                     ("schema_version", self.SCHEMA_VERSION),
@@ -361,6 +479,755 @@ class SQLiteStore:
                 conn.commit()
             finally:
                 conn.close()
+
+    def upsert_event_signals(self, signals: List[Dict[str, Any]]) -> int:
+        now = _utc_now_iso()
+        wrote = 0
+        with self._lock:
+            conn = self._connect()
+            try:
+                for item in signals or []:
+                    if not isinstance(item, dict):
+                        continue
+                    event_id = str(item.get("event_id") or "").strip()
+                    if not event_id:
+                        continue
+                    sql_date = str(item.get("sql_date") or "").strip()
+                    event_code = str(item.get("event_code") or "").strip()
+                    source_json = item.get("source_json")
+                    if isinstance(source_json, dict):
+                        source_json = json.dumps(source_json, ensure_ascii=False)
+                    source_json = str(source_json or "").strip() or "{}"
+                    try:
+                        float(item.get("confidence") or 0.0)
+                    except Exception:
+                        item["confidence"] = 0.0
+
+                    conn.execute(
+                        """
+                        INSERT INTO event_signals(
+                            event_id, sql_date, goldstein_scale, num_mentions, event_code, quad_class, avg_tone,
+                            source_json, confidence, updated_at
+                        )
+                        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(event_id) DO UPDATE SET
+                            sql_date=excluded.sql_date,
+                            goldstein_scale=excluded.goldstein_scale,
+                            num_mentions=excluded.num_mentions,
+                            event_code=excluded.event_code,
+                            quad_class=excluded.quad_class,
+                            avg_tone=excluded.avg_tone,
+                            source_json=excluded.source_json,
+                            confidence=excluded.confidence,
+                            updated_at=excluded.updated_at
+                        """,
+                        (
+                            event_id,
+                            sql_date,
+                            item.get("goldstein_scale"),
+                            item.get("num_mentions"),
+                            event_code,
+                            item.get("quad_class"),
+                            item.get("avg_tone"),
+                            source_json,
+                            float(item.get("confidence") or 0.0),
+                            str(item.get("updated_at") or "").strip() or now,
+                        ),
+                    )
+                    wrote += 1
+                conn.commit()
+                return wrote
+            finally:
+                conn.close()
+
+    def get_event_signals(self, event_id: str) -> Optional[Dict[str, Any]]:
+        eid = (event_id or "").strip()
+        if not eid:
+            return None
+        with self._lock:
+            conn = self._connect()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT event_id, sql_date, goldstein_scale, num_mentions, event_code, quad_class, avg_tone,
+                           source_json, confidence, updated_at
+                    FROM event_signals
+                    WHERE event_id=?
+                    """,
+                    (eid,),
+                ).fetchone()
+                if row is None:
+                    return None
+                out = dict(row)
+                try:
+                    src = json.loads(out.get("source_json") or "{}")
+                    if not isinstance(src, dict):
+                        src = {}
+                except Exception:
+                    src = {}
+                out["source"] = src
+                return out
+            finally:
+                conn.close()
+
+    def upsert_event_observations(self, observations: List[Dict[str, Any]]) -> int:
+        now = _utc_now_iso()
+        wrote = 0
+        with self._lock:
+            conn = self._connect()
+            try:
+                for item in observations or []:
+                    if not isinstance(item, dict):
+                        continue
+                    event_id = str(item.get("event_id") or "").strip()
+                    field = str(item.get("field") or "").strip()
+                    if not event_id or not field:
+                        continue
+
+                    value_text = str(item.get("value_text") or "").strip()
+
+                    value_json = item.get("value_json")
+                    if isinstance(value_json, str):
+                        value_json_str = value_json.strip() or "{}"
+                    elif isinstance(value_json, dict):
+                        value_json_str = json.dumps(value_json, ensure_ascii=False)
+                    else:
+                        value_json_str = "{}"
+
+                    evidence_json = item.get("evidence_json")
+                    if isinstance(evidence_json, str):
+                        evidence_json_str = evidence_json.strip() or "[]"
+                    elif isinstance(evidence_json, list) or isinstance(evidence_json, dict):
+                        evidence_json_str = json.dumps(evidence_json, ensure_ascii=False)
+                    else:
+                        evidence_json_str = "[]"
+
+                    model_name = str(item.get("model_name") or "").strip()
+                    model_version = str(item.get("model_version") or "").strip()
+                    algorithm = str(item.get("algorithm") or "").strip()
+                    try:
+                        revision = int(item.get("revision") or 0)
+                    except Exception:
+                        revision = 0
+                    try:
+                        is_default = 1 if int(item.get("is_default") or 0) else 0
+                    except Exception:
+                        is_default = 0
+
+                    observation_id = str(item.get("observation_id") or "").strip()
+                    if not observation_id:
+                        observation_id = _sha1_text(
+                            f"obs:{event_id}|{field}|{value_text}|{value_json_str}|{model_name}|{model_version}|{algorithm}|{revision}"
+                        )
+
+                    created_at = str(item.get("created_at") or "").strip() or now
+                    updated_at = str(item.get("updated_at") or "").strip() or now
+
+                    conn.execute(
+                        """
+                        INSERT INTO event_observations(
+                            observation_id, event_id, field,
+                            value_text, value_json, evidence_json,
+                            model_name, model_version, algorithm,
+                            revision, is_default, created_at, updated_at
+                        )
+                        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(observation_id) DO UPDATE SET
+                            event_id=excluded.event_id,
+                            field=excluded.field,
+                            value_text=excluded.value_text,
+                            value_json=excluded.value_json,
+                            evidence_json=excluded.evidence_json,
+                            model_name=excluded.model_name,
+                            model_version=excluded.model_version,
+                            algorithm=excluded.algorithm,
+                            revision=excluded.revision,
+                            is_default=excluded.is_default,
+                            updated_at=excluded.updated_at
+                        """,
+                        (
+                            observation_id,
+                            event_id,
+                            field,
+                            value_text,
+                            value_json_str,
+                            evidence_json_str,
+                            model_name,
+                            model_version,
+                            algorithm,
+                            revision,
+                            is_default,
+                            created_at,
+                            updated_at,
+                        ),
+                    )
+                    wrote += 1
+                conn.commit()
+                return wrote
+            finally:
+                conn.close()
+
+    def list_event_observations(self, event_id: str, field: str = "") -> List[Dict[str, Any]]:
+        eid = (event_id or "").strip()
+        if not eid:
+            return []
+        f = (field or "").strip()
+        with self._lock:
+            conn = self._connect()
+            try:
+                if f:
+                    rows = conn.execute(
+                        """
+                        SELECT observation_id, event_id, field, value_text, value_json, evidence_json,
+                               model_name, model_version, algorithm, revision, is_default, created_at, updated_at
+                        FROM event_observations
+                        WHERE event_id=? AND field=?
+                        ORDER BY is_default DESC, revision DESC, updated_at DESC
+                        """,
+                        (eid, f),
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        """
+                        SELECT observation_id, event_id, field, value_text, value_json, evidence_json,
+                               model_name, model_version, algorithm, revision, is_default, created_at, updated_at
+                        FROM event_observations
+                        WHERE event_id=?
+                        ORDER BY field ASC, is_default DESC, revision DESC, updated_at DESC
+                        """,
+                        (eid,),
+                    ).fetchall()
+                out: List[Dict[str, Any]] = []
+                for r in rows or []:
+                    d = dict(r)
+                    try:
+                        vj = json.loads(d.get("value_json") or "{}")
+                        if not isinstance(vj, dict):
+                            vj = {}
+                    except Exception:
+                        vj = {}
+                    try:
+                        ej = json.loads(d.get("evidence_json") or "[]")
+                        if not isinstance(ej, list):
+                            ej = []
+                    except Exception:
+                        ej = []
+                    d["value"] = vj
+                    d["evidence"] = ej
+                    out.append(d)
+                return out
+            finally:
+                conn.close()
+
+    def get_default_event_projection(self, event_id: str) -> Dict[str, Any]:
+        eid = (event_id or "").strip()
+        if not eid:
+            return {}
+        obs = self.list_event_observations(eid)
+        best: Dict[str, Dict[str, Any]] = {}
+        for o in obs:
+            f = str(o.get("field") or "").strip()
+            if not f:
+                continue
+            if f not in best:
+                best[f] = o
+        proj: Dict[str, Any] = {}
+        for f, o in best.items():
+            if f == "start_time":
+                v = o.get("value") or {}
+                if isinstance(v, dict):
+                    if v.get("time"):
+                        proj["event_start_time"] = str(v.get("time") or "")
+                    if v.get("time_text") is not None:
+                        proj["event_start_time_text"] = str(v.get("time_text") or "")
+                    if v.get("precision"):
+                        proj["event_start_time_precision"] = str(v.get("precision") or "")
+            if f == "description":
+                proj["event_summary"] = str(o.get("value_text") or "")
+        proj["event_id"] = eid
+        return proj
+
+    def seed_event_observations(self, event_id: str) -> int:
+        eid = (event_id or "").strip()
+        if not eid:
+            return 0
+        now = _utc_now_iso()
+        with self._lock:
+            conn = self._connect()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT event_id, abstract, event_summary, event_types_json,
+                           event_start_time, event_start_time_text, event_start_time_precision,
+                           reported_at, first_seen, last_seen
+                    FROM events
+                    WHERE event_id=?
+                    """,
+                    (eid,),
+                ).fetchone()
+                if row is None:
+                    return 0
+                evt = dict(row)
+                mrows = conn.execute(
+                    """
+                    SELECT mention_id, abstract_text, reported_at, source_json, confidence, created_at
+                    FROM event_mentions
+                    WHERE resolved_event_id=?
+                    ORDER BY reported_at ASC
+                    """,
+                    (eid,),
+                ).fetchall()
+                evidence: List[Dict[str, Any]] = []
+                for m in mrows or []:
+                    item = {
+                        "mention_id": str(m["mention_id"] or ""),
+                        "reported_at": str(m["reported_at"] or ""),
+                        "abstract_text": str(m["abstract_text"] or ""),
+                    }
+                    try:
+                        src = json.loads(str(m["source_json"] or "[]"))
+                    except Exception:
+                        src = []
+                    item["source"] = src
+                    evidence.append(item)
+
+                try:
+                    types = json.loads(str(evt.get("event_types_json") or "[]"))
+                    if not isinstance(types, list):
+                        types = []
+                except Exception:
+                    types = []
+
+                obs: List[Dict[str, Any]] = []
+                start_time = str(evt.get("event_start_time") or "").strip()
+                start_time_text = str(evt.get("event_start_time_text") or "").strip()
+                start_time_precision = str(evt.get("event_start_time_precision") or "").strip()
+                if start_time or start_time_text:
+                    obs.append(
+                        {
+                            "event_id": eid,
+                            "field": "start_time",
+                            "value_text": start_time_text or start_time,
+                            "value_json": {
+                                "time": start_time,
+                                "time_text": start_time_text,
+                                "precision": start_time_precision or "unknown",
+                                "seed_from": "events",
+                            },
+                            "evidence_json": evidence,
+                            "model_name": "project_pipeline",
+                            "model_version": "",
+                            "algorithm": "seed_from_events_table",
+                            "revision": 0,
+                            "is_default": 1,
+                            "created_at": now,
+                            "updated_at": now,
+                        }
+                    )
+
+                summary = str(evt.get("event_summary") or "").strip()
+                abstract = str(evt.get("abstract") or "").strip()
+                if summary or abstract:
+                    obs.append(
+                        {
+                            "event_id": eid,
+                            "field": "description",
+                            "value_text": summary or abstract,
+                            "value_json": {"abstract": abstract, "event_types": types, "seed_from": "events"},
+                            "evidence_json": evidence,
+                            "model_name": "project_pipeline",
+                            "model_version": "",
+                            "algorithm": "seed_from_events_table",
+                            "revision": 0,
+                            "is_default": 1,
+                            "created_at": now,
+                            "updated_at": now,
+                        }
+                    )
+
+                return self.upsert_event_observations(obs)
+            finally:
+                conn.close()
+
+    def validate_event_against_signals(self, event_id: str) -> Dict[str, Any]:
+        eid = (event_id or "").strip()
+        if not eid:
+            return {"status": "error", "message": "empty event_id"}
+
+        proj = self.get_default_event_projection(eid)
+        signals = self.get_event_signals(eid) or {}
+
+        internal_start = str(proj.get("event_start_time") or "").strip()
+        external_sql_date = str(signals.get("sql_date") or "").strip()
+
+        def to_yyyymmdd_from_iso(s: str) -> str:
+            ss = (s or "").strip()
+            if not ss:
+                return ""
+            if len(ss) >= 10 and ss[4] == "-" and ss[7] == "-":
+                return ss[0:4] + ss[5:7] + ss[8:10]
+            return ""
+
+        checks: List[Dict[str, Any]] = []
+
+        if internal_start and external_sql_date:
+            internal_date = to_yyyymmdd_from_iso(internal_start)
+            if internal_date and internal_date == external_sql_date:
+                checks.append({"field": "start_date", "status": "match", "internal": internal_date, "external": external_sql_date})
+            else:
+                checks.append({"field": "start_date", "status": "mismatch", "internal": internal_date, "external": external_sql_date})
+        else:
+            checks.append({"field": "start_date", "status": "unknown", "internal": to_yyyymmdd_from_iso(internal_start), "external": external_sql_date})
+
+        with self._lock:
+            conn = self._connect()
+            try:
+                internal_mentions = int(
+                    conn.execute("SELECT COUNT(1) FROM event_mentions WHERE resolved_event_id=?", (eid,)).fetchone()[0]
+                )
+            finally:
+                conn.close()
+
+        external_mentions = signals.get("num_mentions")
+        if isinstance(external_mentions, int):
+            if int(external_mentions) == int(internal_mentions):
+                checks.append({"field": "num_mentions", "status": "match", "internal": internal_mentions, "external": external_mentions})
+            else:
+                checks.append({"field": "num_mentions", "status": "mismatch", "internal": internal_mentions, "external": external_mentions})
+        else:
+            checks.append({"field": "num_mentions", "status": "unknown", "internal": internal_mentions, "external": external_mentions})
+
+        return {
+            "status": "ok",
+            "event_id": eid,
+            "internal": {"projection": proj, "mentions": internal_mentions},
+            "external": {"signals": signals},
+            "checks": checks,
+        }
+
+    def upsert_relation_states(self, states: List[Dict[str, Any]]) -> int:
+        now = _utc_now_iso()
+        wrote = 0
+        with self._lock:
+            conn = self._connect()
+            try:
+                for item in states or []:
+                    if not isinstance(item, dict):
+                        continue
+                    subject_entity_id = str(item.get("subject_entity_id") or "").strip()
+                    predicate = str(item.get("predicate") or "").strip()
+                    object_entity_id = str(item.get("object_entity_id") or "").strip()
+                    valid_from = str(item.get("valid_from") or "").strip()
+                    if not subject_entity_id or not predicate or not object_entity_id or not valid_from:
+                        continue
+
+                    valid_to = str(item.get("valid_to") or "").strip()
+                    state_text = str(item.get("state_text") or "").strip()
+                    if not state_text:
+                        continue
+                    relation_kind = str(item.get("relation_kind") or "").strip()
+
+                    evidence_json = item.get("evidence_json")
+                    if isinstance(evidence_json, str):
+                        evidence_json_str = evidence_json.strip() or "[]"
+                    elif isinstance(evidence_json, list) or isinstance(evidence_json, dict):
+                        evidence_json_str = json.dumps(evidence_json, ensure_ascii=False)
+                    else:
+                        evidence_json_str = "[]"
+
+                    algorithm = str(item.get("algorithm") or "").strip()
+                    try:
+                        revision = int(item.get("revision") or 0)
+                    except Exception:
+                        revision = 0
+                    try:
+                        is_default = 1 if int(item.get("is_default") or 0) else 0
+                    except Exception:
+                        is_default = 0
+
+                    relation_state_id = str(item.get("relation_state_id") or "").strip()
+                    if not relation_state_id:
+                        relation_state_id = _sha1_text(
+                            f"rel_state:{subject_entity_id}|{predicate}|{object_entity_id}|{valid_from}|{valid_to}|{state_text}|{algorithm}|{revision}"
+                        )
+
+                    created_at = str(item.get("created_at") or "").strip() or now
+                    updated_at = str(item.get("updated_at") or "").strip() or now
+
+                    conn.execute(
+                        """
+                        INSERT INTO relation_states(
+                            relation_state_id, subject_entity_id, predicate, object_entity_id,
+                            relation_kind, valid_from, valid_to, state_text, evidence_json,
+                            algorithm, revision, is_default, created_at, updated_at
+                        )
+                        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(subject_entity_id, predicate, object_entity_id, valid_from, valid_to, revision)
+                        DO UPDATE SET
+                            relation_kind=excluded.relation_kind,
+                            state_text=excluded.state_text,
+                            evidence_json=excluded.evidence_json,
+                            algorithm=excluded.algorithm,
+                            is_default=excluded.is_default,
+                            updated_at=excluded.updated_at
+                        """,
+                        (
+                            relation_state_id,
+                            subject_entity_id,
+                            predicate,
+                            object_entity_id,
+                            relation_kind,
+                            valid_from,
+                            valid_to,
+                            state_text,
+                            evidence_json_str,
+                            algorithm,
+                            revision,
+                            is_default,
+                            created_at,
+                            updated_at,
+                        ),
+                    )
+                    wrote += 1
+                conn.commit()
+                return wrote
+            finally:
+                conn.close()
+
+    def list_relation_states(
+        self,
+        subject_entity_id: str,
+        predicate: str,
+        object_entity_id: str,
+        *,
+        limit: int = 200,
+    ) -> List[Dict[str, Any]]:
+        s_id = str(subject_entity_id or "").strip()
+        p = str(predicate or "").strip()
+        o_id = str(object_entity_id or "").strip()
+        if not s_id or not p or not o_id:
+            return []
+        with self._lock:
+            conn = self._connect()
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        relation_state_id, subject_entity_id, predicate, object_entity_id,
+                        relation_kind, valid_from, valid_to, state_text, evidence_json,
+                        algorithm, revision, is_default, created_at, updated_at
+                    FROM relation_states
+                    WHERE subject_entity_id=? AND predicate=? AND object_entity_id=?
+                    ORDER BY valid_from ASC, is_default DESC, revision DESC, updated_at DESC
+                    LIMIT ?
+                    """,
+                    (s_id, p, o_id, int(limit)),
+                ).fetchall()
+                out: List[Dict[str, Any]] = []
+                for r in rows or []:
+                    d = dict(r)
+                    try:
+                        ej = json.loads(d.get("evidence_json") or "[]")
+                        if not isinstance(ej, list):
+                            ej = []
+                    except Exception:
+                        ej = []
+                    d["evidence"] = ej
+                    out.append(d)
+                return out
+            finally:
+                conn.close()
+
+    def query_relation_timeline(
+        self,
+        subject_entity_id: str,
+        predicate: str,
+        object_entity_id: str,
+        *,
+        limit: int = 200,
+    ) -> List[Dict[str, Any]]:
+        return self.list_relation_states(subject_entity_id, predicate, object_entity_id, limit=int(limit))
+
+    def rebuild_relation_states_for_triple(
+        self,
+        subject_entity_id: str,
+        predicate: str,
+        object_entity_id: str,
+        *,
+        algorithm: str = "rule_relation_states_v1",
+    ) -> int:
+        s_id = str(subject_entity_id or "").strip()
+        p = str(predicate or "").strip()
+        o_id = str(object_entity_id or "").strip()
+        if not s_id or not p or not o_id:
+            return 0
+
+        def _trim(s: str, n: int) -> str:
+            return s if len(s) <= n else s[:n]
+
+        def _norm_kind(v: Any) -> str:
+            s = str(v or "").strip().lower()
+            if s in {"state", "static", "persistent", "stative", "status"}:
+                return "state"
+            if s in {"event", "dynamic", "action", "incident"}:
+                return "event"
+            if s in {"静态", "状态", "持续", "事实"}:
+                return "state"
+            if s in {"动态", "事件", "动作", "言语", "一次"}:
+                return "event"
+            return ""
+
+        with self._lock:
+            conn = self._connect()
+            try:
+                names = conn.execute(
+                    """
+                    SELECT
+                        (SELECT name FROM entities WHERE entity_id=?) AS s_name,
+                        (SELECT name FROM entities WHERE entity_id=?) AS o_name
+                    """,
+                    (s_id, o_id),
+                ).fetchone()
+                s_name = str(names["s_name"] or "") if names else ""
+                o_name = str(names["o_name"] or "") if names else ""
+
+                rows = conn.execute(
+                    """
+                    SELECT r.id AS rel_id, r.event_id AS event_id, r.time AS rel_time, r.relation_kind AS rel_kind, r.evidence_json AS rel_evidence_json,
+                           e.abstract AS abstract, e.event_summary AS event_summary, e.event_start_time AS event_start_time,
+                           e.event_start_time_text AS event_start_time_text, e.event_start_time_precision AS event_start_time_precision
+                    FROM relations r
+                    JOIN events e ON e.event_id = r.event_id
+                    WHERE r.subject_entity_id=? AND r.predicate=? AND r.object_entity_id=?
+                    ORDER BY r.time ASC, r.id ASC
+                    """,
+                    (s_id, p, o_id),
+                ).fetchall()
+            finally:
+                conn.close()
+
+        if not rows:
+            return 0
+
+        items: List[Dict[str, Any]] = []
+        for r in rows:
+            event_id = str(r["event_id"] or "")
+            proj = self.get_default_event_projection(event_id) if event_id else {}
+            start_time = str(proj.get("event_start_time") or "").strip()
+            if not start_time:
+                start_time = str(r["event_start_time"] or "").strip() or str(r["rel_time"] or "").strip()
+            if not start_time:
+                continue
+
+            summary = str(proj.get("event_summary") or "").strip()
+            if not summary:
+                summary = str(r["event_summary"] or "").strip() or str(r["abstract"] or "").strip()
+
+            mention_id = ""
+            mention_quote = ""
+            with self._lock:
+                conn = self._connect()
+                try:
+                    m = conn.execute(
+                        """
+                        SELECT mention_id, abstract_text
+                        FROM event_mentions
+                        WHERE resolved_event_id=?
+                        ORDER BY reported_at ASC
+                        LIMIT 1
+                        """,
+                        (event_id,),
+                    ).fetchone()
+                    if m is not None:
+                        mention_id = str(m["mention_id"] or "")
+                        mention_quote = str(m["abstract_text"] or "")
+                finally:
+                    conn.close()
+
+            rel_ev = []
+            try:
+                rel_ev = json.loads(str(r["rel_evidence_json"] or "[]"))
+                if not isinstance(rel_ev, list):
+                    rel_ev = []
+            except Exception:
+                rel_ev = []
+
+            quote = ""
+            if rel_ev and isinstance(rel_ev[0], str):
+                quote = rel_ev[0]
+            if not quote:
+                quote = mention_quote or summary
+
+            items.append(
+                {
+                    "event_id": event_id,
+                    "time": start_time,
+                    "summary": summary,
+                    "mention_id": mention_id,
+                    "quote": _trim(str(quote or "").strip(), 180),
+                    "relation_kind": _norm_kind(r["rel_kind"]) or "",
+                }
+            )
+
+        items.sort(key=lambda x: str(x.get("time") or ""))
+        if not items:
+            return 0
+
+        now = _utc_now_iso()
+        states: List[Dict[str, Any]] = []
+        for i, it in enumerate(items):
+            valid_from = str(it["time"])
+            kind = _norm_kind(it.get("relation_kind")) or "state"
+            if kind == "event":
+                valid_to = valid_from
+            else:
+                valid_to = str(items[i + 1]["time"]) if i + 1 < len(items) else ""
+            summary = str(it.get("summary") or "")
+            if s_name and o_name:
+                state_text = f"{s_name}{p}{o_name}；{summary}"
+            else:
+                state_text = f"{s_id}{p}{o_id}；{summary}"
+            state_text = _trim(state_text.strip(), 240)
+
+            ev = []
+            mid = str(it.get("mention_id") or "").strip()
+            qt = str(it.get("quote") or "").strip()
+            if mid and qt:
+                ev.append({"mention_id": mid, "quote": qt, "event_id": str(it.get("event_id") or "")})
+
+            states.append(
+                {
+                    "subject_entity_id": s_id,
+                    "predicate": p,
+                    "object_entity_id": o_id,
+                    "relation_kind": kind,
+                    "valid_from": valid_from,
+                    "valid_to": valid_to,
+                    "state_text": state_text,
+                    "evidence_json": ev,
+                    "algorithm": algorithm,
+                    "revision": 0,
+                    "is_default": 1,
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            )
+
+        with self._lock:
+            conn = self._connect()
+            try:
+                conn.execute(
+                    """
+                    DELETE FROM relation_states
+                    WHERE subject_entity_id=? AND predicate=? AND object_entity_id=? AND algorithm=? AND revision=0
+                    """,
+                    (s_id, p, o_id, algorithm),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+        return self.upsert_relation_states(states)
 
     # -------------------------
     # Review APIs
@@ -651,6 +1518,7 @@ class SQLiteStore:
         """
         base_ts = _norm_iso_ts(reported_at) or _utc_now_iso()
         sources = _norm_source_list([source])
+        triples_to_rebuild: List[Tuple[str, str, str]] = []
 
         with self._lock:
             conn = self._connect()
@@ -857,6 +1725,7 @@ class SQLiteStore:
                         s = str(rel.get("subject") or "").strip()
                         p = str(rel.get("predicate") or "").strip()
                         o = str(rel.get("object") or "").strip()
+                        relation_kind = _norm_relation_kind(rel.get("relation_kind")) or _infer_relation_kind(p)
                         if not s or not p or not o:
                             continue
                         # 关系两端实体可能不在该事件 entities 列表里（历史数据/抽取不一致），但为了满足外键与“每条元组带时间”，
@@ -885,29 +1754,43 @@ class SQLiteStore:
                             ev_list = [x.strip() for x in ev if isinstance(x, str) and x.strip()]
                         else:
                             ev_list = []
+                        s_id = canonical_entity_id(s)
+                        o_id = canonical_entity_id(o)
                         conn.execute(
                             """
-                            INSERT INTO relations(event_id, subject_entity_id, predicate, object_entity_id, time, reported_at, evidence_json)
-                            VALUES(?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO relations(event_id, subject_entity_id, predicate, object_entity_id, relation_kind, time, reported_at, evidence_json)
+                            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
                             ON CONFLICT(event_id, subject_entity_id, predicate, object_entity_id) DO UPDATE SET
+                                relation_kind=excluded.relation_kind,
                                 time=excluded.time,
                                 reported_at=excluded.reported_at,
                                 evidence_json=excluded.evidence_json
                             """,
                             (
                                 event_id,
-                                canonical_entity_id(s),
+                                s_id,
                                 p,
-                                canonical_entity_id(o),
+                                o_id,
+                                relation_kind,
                                 evt_time,
                                 base_ts,
                                 json.dumps(ev_list, ensure_ascii=False),
                             ),
                         )
+                        triples_to_rebuild.append((s_id, p, o_id))
 
                 conn.commit()
             finally:
                 conn.close()
+
+        uniq: Dict[Tuple[str, str, str], int] = {}
+        for t in triples_to_rebuild:
+            uniq[t] = 1
+        for (s_id, p, o_id) in uniq.keys():
+            try:
+                self.rebuild_relation_states_for_triple(s_id, p, o_id)
+            except Exception:
+                pass
 
     # -------------------------
     # EXPORT (compat JSON)
@@ -921,13 +1804,23 @@ class SQLiteStore:
                 rows = conn.execute(
                     """
                     SELECT
+                        e.entity_id AS entity_id,
                         e.name AS name,
                         e.first_seen AS first_seen,
+                        e.last_seen AS last_seen,
                         e.sources_json AS sources_json,
                         e.original_forms_json AS original_forms_json,
-                        COUNT(DISTINCT p.event_id) AS count
+                        (
+                            SELECT COUNT(DISTINCT p2.event_id)
+                            FROM participants p2
+                            WHERE p2.entity_id = e.entity_id
+                        ) AS count,
+                        (
+                            SELECT COUNT(1)
+                            FROM entity_mentions m
+                            WHERE m.resolved_entity_id = e.entity_id
+                        ) AS mention_count
                     FROM entities e
-                    LEFT JOIN participants p ON p.entity_id = e.entity_id
                     GROUP BY e.entity_id
                     """
                 ).fetchall()
@@ -944,10 +1837,14 @@ class SQLiteStore:
                     except Exception:
                         forms = []
                     out[name] = {
+                        "entity_id": str(r["entity_id"] or ""),
                         "first_seen": str(r["first_seen"] or ""),
+                        "last_seen": str(r["last_seen"] or ""),
                         "sources": sources,
+                        "source_count": int(len(sources or [])),
                         "original_forms": [x for x in forms if isinstance(x, str) and x.strip()],
                         "count": int(r["count"] or 0),
+                        "internal_num_mentions": int(r["mention_count"] or 0),
                     }
                 return out
             finally:
@@ -1036,7 +1933,7 @@ class SQLiteStore:
                     """
                     SELECT event_id, abstract, event_summary, event_types_json,
                            event_start_time, event_start_time_text, event_start_time_precision,
-                           reported_at, first_seen, sources_json
+                           reported_at, first_seen, last_seen, sources_json
                     FROM events
                     """
                 ).fetchall()
@@ -1052,8 +1949,33 @@ class SQLiteStore:
                     "SELECT event_id, entity_id, roles_json, time, reported_at FROM participants"
                 ).fetchall()
                 rels = conn.execute(
-                    "SELECT event_id, subject_entity_id, predicate, object_entity_id, time, reported_at, evidence_json FROM relations"
+                    "SELECT event_id, subject_entity_id, predicate, object_entity_id, relation_kind, time, reported_at, evidence_json FROM relations"
                 ).fetchall()
+                mcnt_rows = conn.execute(
+                    "SELECT resolved_event_id AS event_id, COUNT(1) AS cnt FROM event_mentions GROUP BY resolved_event_id"
+                ).fetchall()
+                mention_count_by_evt = {str(r["event_id"]): int(r["cnt"] or 0) for r in (mcnt_rows or [])}
+
+                obs_rows = conn.execute(
+                    """
+                    SELECT event_id, field, value_text, value_json
+                    FROM event_observations
+                    WHERE is_default=1 AND field IN ('start_time','description')
+                    """
+                ).fetchall()
+                obs_by_evt: Dict[str, Dict[str, Dict[str, Any]]] = {}
+                for r in obs_rows or []:
+                    eid = str(r["event_id"] or "")
+                    f = str(r["field"] or "")
+                    if not eid or not f:
+                        continue
+                    try:
+                        vj = json.loads(str(r["value_json"] or "{}"))
+                        if not isinstance(vj, dict):
+                            vj = {}
+                    except Exception:
+                        vj = {}
+                    obs_by_evt.setdefault(eid, {})[f] = {"value_text": str(r["value_text"] or ""), "value": vj}
                 # entity_id -> name
                 ent_name = {
                     str(r["entity_id"]): str(r["name"])
@@ -1080,6 +2002,28 @@ class SQLiteStore:
                         sources = _norm_source_list(json.loads(e["sources_json"] or "[]"))
                     except Exception:
                         sources = []
+
+                    event_summary = str(e["event_summary"] or "")
+                    event_start_time = str(e["event_start_time"] or "")
+                    event_start_time_text = str(e["event_start_time_text"] or "")
+                    event_start_time_precision = str(e["event_start_time_precision"] or "unknown") or "unknown"
+                    obs = obs_by_evt.get(evt_id) or {}
+                    if isinstance(obs.get("description"), dict):
+                        t = str(obs["description"].get("value_text") or "").strip()
+                        if t:
+                            event_summary = t
+                    if isinstance(obs.get("start_time"), dict):
+                        v = obs["start_time"].get("value") or {}
+                        if isinstance(v, dict):
+                            tt = str(v.get("time") or "").strip()
+                            if tt:
+                                event_start_time = tt
+                            tx = v.get("time_text")
+                            if tx is not None:
+                                event_start_time_text = str(tx or "")
+                            pr = str(v.get("precision") or "").strip()
+                            if pr:
+                                event_start_time_precision = pr
 
                     # participants -> entities + entity_roles
                     entities: List[str] = []
@@ -1110,11 +2054,13 @@ class SQLiteStore:
                                 ev = []
                         except Exception:
                             ev = []
+                        kind = _norm_relation_kind(r["relation_kind"]) or _infer_relation_kind(str(r["predicate"] or ""))
                         relations_out.append(
                             {
                                 "subject": s,
                                 "predicate": str(r["predicate"] or ""),
                                 "object": o,
+                                "relation_kind": kind,
                                 "evidence": [x for x in ev if isinstance(x, str) and x.strip()],
                                 "time": str(r["time"] or ""),
                                 "reported_at": str(r["reported_at"] or ""),
@@ -1124,16 +2070,21 @@ class SQLiteStore:
                     out[abstract] = {
                         "event_id": evt_id,
                         "entities": entities,
-                        "event_summary": str(e["event_summary"] or ""),
+                        "event_summary": event_summary,
                         "event_types": [x for x in types if isinstance(x, str) and x.strip()],
                         "entity_roles": roles_map,
                         "relations": relations_out,
-                        "event_start_time": str(e["event_start_time"] or ""),
-                        "event_start_time_text": str(e["event_start_time_text"] or ""),
-                        "event_start_time_precision": str(e["event_start_time_precision"] or "unknown") or "unknown",
+                        "event_start_time": event_start_time,
+                        "event_start_time_text": event_start_time_text,
+                        "event_start_time_precision": event_start_time_precision,
                         "reported_at": str(e["reported_at"] or ""),
                         "sources": sources,
+                        "source_count": int(len(sources or [])),
                         "first_seen": str(e["first_seen"] or ""),
+                        "last_seen": str(e["last_seen"] or ""),
+                        "entity_count": int(len(entities or [])),
+                        "relation_count": int(len(relations_out or [])),
+                        "internal_num_mentions": int(mention_count_by_evt.get(evt_id) or 0),
                     }
 
                 # 额外输出 alias abstracts：让旧 abstract 也能映射到同一 event_id（兼容旧 UI/链接）

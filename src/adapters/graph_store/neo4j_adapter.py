@@ -44,6 +44,18 @@ def _choose_event_time(event_start_time: str, reported_at: str, first_seen: str)
     return _sqlite_choose_time(event_start_time, reported_at, first_seen)
 
 
+def _norm_relation_kind(v: Any) -> str:
+    from ...adapters.sqlite.store import _norm_relation_kind as _sqlite_norm_kind
+
+    return _sqlite_norm_kind(v)
+
+
+def _infer_relation_kind(predicate: str) -> str:
+    from ...adapters.sqlite.store import _infer_relation_kind as _sqlite_infer_kind
+
+    return _sqlite_infer_kind(predicate)
+
+
 def canonical_entity_id(entity_name: str) -> str:
     from ...adapters.sqlite.store import canonical_entity_id as _canonical_entity_id
 
@@ -353,6 +365,9 @@ SET p.roles = $roles,
                     o = str(rel.get("object") or "").strip()
                     if not s or not p or not o:
                         continue
+                    relation_kind = _norm_relation_kind(
+                        rel.get("relation_kind") or rel.get("kind") or rel.get("type")
+                    ) or _infer_relation_kind(p)
                     ev = rel.get("evidence", [])
                     if isinstance(ev, str):
                         ev_list = [ev.strip()] if ev.strip() else []
@@ -399,6 +414,7 @@ MATCH (o:Entity {entity_id: $oid})
 MERGE (s)-[r:RELATION {predicate: $predicate, event_id: $event_id}]->(o)
 SET r.time = $time,
     r.reported_at = $reported_at,
+    r.relation_kind = $relation_kind,
     r.evidence = $evidence
 """,
                             "params": {
@@ -408,6 +424,7 @@ SET r.time = $time,
                                 "event_id": event_id,
                                 "time": evt_time,
                                 "reported_at": base_ts,
+                                "relation_kind": relation_kind,
                                 "evidence": ev_list,
                             },
                         }
@@ -464,7 +481,7 @@ RETURN ev.event_id AS event_id, en.name AS entity_name, p.roles AS roles, p.time
         rel_rows = self.query(
             """
 MATCH (s:Entity)-[r:RELATION]->(o:Entity)
-RETURN r.event_id AS event_id, s.name AS subject, r.predicate AS predicate, o.name AS object, r.time AS time, r.reported_at AS reported_at, r.evidence AS evidence
+RETURN r.event_id AS event_id, s.name AS subject, r.predicate AS predicate, o.name AS object, r.relation_kind AS relation_kind, r.time AS time, r.reported_at AS reported_at, r.evidence AS evidence
 """
         )
 
@@ -504,11 +521,13 @@ RETURN r.event_id AS event_id, s.name AS subject, r.predicate AS predicate, o.na
                 if not s or not o:
                     continue
                 ev = r.get("evidence") if isinstance(r.get("evidence"), list) else []
+                kind = _norm_relation_kind(r.get("relation_kind")) or _infer_relation_kind(str(r.get("predicate") or ""))
                 relations_out.append(
                     {
                         "subject": s,
                         "predicate": str(r.get("predicate") or ""),
                         "object": o,
+                        "relation_kind": kind,
                         "evidence": [x for x in ev if isinstance(x, str) and x.strip()],
                         "time": str(r.get("time") or ""),
                         "reported_at": str(r.get("reported_at") or ""),
@@ -612,6 +631,7 @@ RETURN r.event_id AS event_id,
        s.entity_id AS subject_entity_id,
        r.predicate AS predicate,
        o.entity_id AS object_entity_id,
+       r.relation_kind AS relation_kind,
        r.time AS time,
        r.reported_at AS reported_at,
        r.evidence AS evidence
@@ -626,12 +646,16 @@ RETURN r.event_id AS event_id,
                     "subject_entity_id": str(r.get("subject_entity_id") or ""),
                     "predicate": str(r.get("predicate") or ""),
                     "object_entity_id": str(r.get("object_entity_id") or ""),
+                    "relation_kind": _norm_relation_kind(r.get("relation_kind")) or "",
                     "time": str(r.get("time") or ""),
                     "reported_at": str(r.get("reported_at") or ""),
                     "evidence_json": json.dumps([x for x in ev if isinstance(x, str) and x.strip()], ensure_ascii=False),
                 }
             )
         return out
+
+    def fetch_relation_states(self) -> List[Dict[str, Any]]:
+        return []
 
     def fetch_event_edges(self) -> List[Dict[str, Any]]:
         return []

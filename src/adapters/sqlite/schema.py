@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import List
 
 # 当前 Schema 版本
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
 
 # =============================================================================
 # 核心表结构（V3）
@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS relations (
     subject_entity_id TEXT NOT NULL,
     predicate TEXT NOT NULL,
     object_entity_id TEXT NOT NULL,
+    relation_kind TEXT NOT NULL DEFAULT '',
     time TEXT NOT NULL,
     reported_at TEXT NOT NULL,
     evidence_json TEXT NOT NULL,
@@ -288,6 +289,11 @@ MIGRATIONS: List[Migration] = [
         version="3",
         description="Add schema_migrations table for version tracking",
         up_sql=MIGRATION_TABLE_DDL,
+    ),
+    Migration(
+        version="4",
+        description="Add relation_kind to relations",
+        up_sql="ALTER TABLE relations ADD COLUMN relation_kind TEXT NOT NULL DEFAULT '';",
     ),
 ]
 

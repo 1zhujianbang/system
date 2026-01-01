@@ -10,8 +10,10 @@ import json
 import hashlib
 import re
 import html as html_std
+import math
 import os
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple, Optional
 from abc import ABC, abstractmethod
@@ -132,6 +134,11 @@ class GraphStyle:
         """
         预处理 HTML Tooltip：
         1. 压缩去除换行和多余空格
+        
+        注意：我们完全去除了外层的样式 wrapper，因为：
+        1. React 端 (EvolutionGraph) 会提供自己的主题化容器。
+        2. PyVis 端虽然会失去圆角/阴影，但内容仍然可见（默认原生 tooltip 样式或透明背景）。
+           为了保证新版体验，我们牺牲旧版的一点美观度。
         """
         return " ".join(html.split())
 
@@ -256,13 +263,13 @@ class GraphStyle:
         """生成实体 Tooltip (表格样式)"""
         count = info.get("count", 0)
         html = f"""
-        <table style="font-family: Arial, sans-serif; border-collapse: collapse; min-width: 180px; background-color: white; border-radius: 6px; overflow: hidden;">
-            <tr style="background-color: #e3f2fd; border-bottom: 1px solid #bbdefb;">
-                <th colspan="2" style="padding: 8px; text-align: left; color: #1565c0; font-size: 13px;">{html_std.escape(entity_name)}</th>
+        <table style="font-family: Arial, sans-serif; border-collapse: collapse; min-width: 180px; background-color: transparent;">
+            <tr style="border-bottom: 1px solid rgba(128,128,128,0.2);">
+                <th colspan="2" style="padding: 8px; text-align: left; color: inherit; font-size: 13px;">{html_std.escape(entity_name)}</th>
             </tr>
             <tr>
-                <td style="padding: 8px; color: #666; font-size: 12px;">出现频次</td>
-                <td style="padding: 8px; color: #333; font-weight: bold; font-size: 12px;">{html_std.escape(str(count))}</td>
+                <td style="padding: 8px; opacity: 0.7; font-size: 12px;">出现频次</td>
+                <td style="padding: 8px; font-weight: bold; font-size: 12px;">{html_std.escape(str(count))}</td>
             </tr>
         </table>
         """
@@ -273,30 +280,30 @@ class GraphStyle:
         rows = ""
         for time_display, summary in items:
             rows += (
-                "<tr style=\"border-bottom: 1px solid #f1f3f5;\">"
-                f"<td style=\"padding: 6px 8px; width: 92px; color: #495057; font-size: 12px; vertical-align: top;\">{html_std.escape(str(time_display))}</td>"
-                f"<td style=\"padding: 6px 8px; color: #212529; font-size: 12px; line-height: 1.4;\">{html_std.escape(str(summary or ''))}</td>"
+                "<tr style=\"border-bottom: 1px solid rgba(128,128,128,0.1);\">"
+                f"<td style=\"padding: 6px 8px; width: 92px; opacity: 0.8; font-size: 12px; vertical-align: top;\">{html_std.escape(str(time_display))}</td>"
+                f"<td style=\"padding: 6px 8px; opacity: 0.9; font-size: 12px; line-height: 1.4;\">{html_std.escape(str(summary or ''))}</td>"
                 "</tr>"
             )
 
         if not rows:
             rows = (
                 "<tr>"
-                "<td colspan=\"2\" style=\"padding: 8px; color: #999; font-style: italic; font-size: 12px;\">None</td>"
+                "<td colspan=\"2\" style=\"padding: 8px; opacity: 0.6; font-style: italic; font-size: 12px;\">None</td>"
                 "</tr>"
             )
 
         html = f"""
-        <table style="font-family: Arial, sans-serif; border-collapse: collapse; width: 360px; background-color: white; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <table style="font-family: Arial, sans-serif; border-collapse: collapse; width: 360px; background-color: transparent;">
             <thead>
-                <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e9ecef;">
-                    <th colspan="2" style="padding: 10px; text-align: left; color: #343a40; font-size: 14px;">{html_std.escape(entity1)} ↔ {html_std.escape(entity2)}</th>
+                <tr style="border-bottom: 2px solid rgba(128,128,128,0.2);">
+                    <th colspan="2" style="padding: 10px; text-align: left; color: inherit; font-size: 14px;">{html_std.escape(entity1)} ↔ {html_std.escape(entity2)}</th>
                 </tr>
             </thead>
             <tbody>
-                <tr style="border-bottom: 1px solid #f1f3f5;">
-                    <td style="padding: 8px; width: 92px; color: #868e96; font-size: 12px; font-weight: bold; vertical-align: top;">关系</td>
-                    <td style="padding: 8px; color: #495057; font-size: 12px;">按时间排序的共现事件</td>
+                <tr style="border-bottom: 1px solid rgba(128,128,128,0.1);">
+                    <td style="padding: 8px; width: 92px; opacity: 0.7; font-size: 12px; font-weight: bold; vertical-align: top;">关系</td>
+                    <td style="padding: 8px; opacity: 0.9; font-size: 12px;">按时间排序的共现事件</td>
                 </tr>
                 <tr>
                     <td colspan="2" style="padding: 0;">
@@ -348,6 +355,74 @@ class GraphStyle:
                             <table style="border-collapse: collapse; width: 100%;">{rows}</table>
                         </div>
                     </td>
+                </tr>
+            </tbody>
+        </table>
+        """
+        return GraphStyle.prepare_html_tooltip(html)
+
+    @staticmethod
+    def generate_relation_state_tooltip(node_data: Dict[str, Any]) -> str:
+        predicate = str(node_data.get("predicate") or node_data.get("label") or "").strip() or "relation"
+        valid_from = str(node_data.get("interval_start") or node_data.get("valid_from") or node_data.get("time") or "").strip()
+        valid_to = str(node_data.get("interval_end") or node_data.get("valid_to") or "").strip()
+        state_text = str(node_data.get("state_text") or "").strip()
+
+        def _fmt(ts: str) -> str:
+            if not ts:
+                return ""
+            try:
+                if "T" in ts:
+                    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                    return dt.strftime("%Y-%m-%d %H:%M")
+                return ts
+            except Exception:
+                return ts
+
+        evidence_raw = node_data.get("evidence")
+        if not isinstance(evidence_raw, list):
+            evidence_raw = []
+        evidence_items: List[str] = []
+        for x in evidence_raw:
+            if isinstance(x, str) and x.strip():
+                evidence_items.append(x.strip())
+            elif isinstance(x, dict):
+                v = str(x.get("quote") or x.get("text") or x.get("mention_id") or "").strip()
+                if v:
+                    evidence_items.append(v)
+            if len(evidence_items) >= 5:
+                break
+
+        if evidence_items:
+            evidence_html = "".join(
+                f"<li style=\"margin: 0 0 6px 0;\">{GraphStyle._wrap_text_html(it, width=28)}</li>" for it in evidence_items
+            )
+            evidence_html = f"<ul style=\"margin: 0; padding-left: 16px;\">{evidence_html}</ul>"
+        else:
+            evidence_html = '<span style="color: #999; font-style: italic;">None</span>'
+
+        interval_text = f"{_fmt(valid_from) or 'Unknown'} → {_fmt(valid_to) or 'Unknown'}"
+        state_text_html = GraphStyle._wrap_text_html(state_text, width=28) if state_text else '<span style="opacity: 0.6; font-style: italic;">None</span>'
+
+        html = f"""
+        <table style="font-family: Arial, sans-serif; border-collapse: collapse; width: 360px; background-color: transparent;">
+            <thead>
+                <tr style="border-bottom: 2px solid rgba(128,128,128,0.2);">
+                    <th colspan="2" style="padding: 10px; text-align: left; color: inherit; font-size: 14px;">{html_std.escape(predicate)}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid rgba(128,128,128,0.1);">
+                    <td style="padding: 8px; width: 92px; opacity: 0.7; font-size: 12px; font-weight: bold; vertical-align: top;">时间段</td>
+                    <td style="padding: 8px; font-size: 12px; line-height: 1.4;">{html_std.escape(interval_text)}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(128,128,128,0.1);">
+                    <td style="padding: 8px; width: 92px; opacity: 0.7; font-size: 12px; font-weight: bold; vertical-align: top;">状态</td>
+                    <td style="padding: 8px; font-size: 12px; line-height: 1.4;">{state_text_html}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; width: 92px; opacity: 0.7; font-size: 12px; font-weight: bold; vertical-align: top;">证据</td>
+                    <td style="padding: 8px;">{evidence_html}</td>
                 </tr>
             </tbody>
         </table>
@@ -832,6 +907,15 @@ class SnapshotGraphRenderer(GraphRenderer):
                 color = GraphStyle.COLOR_EVENT
                 shape = GraphStyle.SHAPE_EVENT_GE 
                 size = 18
+            elif ntype == "relation_state":
+                title = GraphStyle.generate_relation_state_tooltip(n)
+                raw_color = str(n.get("color") or "")
+                if raw_color and raw_color.startswith("#"):
+                    color = raw_color
+                else:
+                    color = "#999999"
+                shape = "box"
+                size = 16
             else:
                 # 实体 Tooltip
                 title = GraphStyle.generate_entity_tooltip(nid, {"count": deg.get(nid, 0)})
@@ -846,9 +930,6 @@ class SnapshotGraphRenderer(GraphRenderer):
 
             d = deg.get(nid, 0)
             size = min(size + int(d / 3), 40)
-            
-            if ntype == "relation_state":
-                shape = "box"
                 
             # 统一截断 Label
             display_label = GraphStyle._truncate_label(label)
@@ -1647,69 +1728,763 @@ class EntityRelationGraphRenderer(GraphRenderer):
 class EvolutionGraphRenderer(GraphRenderer):
     """动态演化图谱渲染器"""
     
+    def _load_snapshot_or_fallback(self) -> Optional[Dict[str, Any]]:
+        loader = SnapshotLoader(snapshot_dir=Path("data/snapshots"))
+        raw = loader.load_snapshot("EE_EVO")
+        if isinstance(raw, dict):
+            return raw
+
+        kg_store = self._get_kg_store()
+        rows_entities = kg_store.fetch_entities() or []
+        rows_states = kg_store.fetch_relation_states() or []
+        if not rows_entities or not rows_states:
+            return None
+
+        entid_to_name: Dict[str, str] = {}
+        for r in rows_entities:
+            if not isinstance(r, dict):
+                continue
+            eid = str(r.get("entity_id") or "").strip()
+            name = str(r.get("name") or "").strip()
+            if eid and name:
+                entid_to_name[eid] = name
+
+        nodes_by_id: Dict[str, Dict[str, Any]] = {}
+        edges: List[Dict[str, Any]] = []
+
+        for r in rows_states:
+            if not isinstance(r, dict):
+                continue
+            s_id = str(r.get("subject_entity_id") or "").strip()
+            o_id = str(r.get("object_entity_id") or "").strip()
+            s = entid_to_name.get(s_id, "")
+            o = entid_to_name.get(o_id, "")
+            p = str(r.get("predicate") or "").strip()
+            if not s or not o or not p:
+                continue
+
+            rel_id = str(r.get("relation_state_id") or "").strip()
+            if not rel_id:
+                rel_id = f"RELSTATE:{s}|{p}|{o}|{str(r.get('valid_from') or '')}|{str(r.get('valid_to') or '')}"
+
+            valid_from = str(r.get("valid_from") or "").strip()
+            valid_to = str(r.get("valid_to") or "").strip()
+            relation_kind = str(r.get("relation_kind") or "").strip() or "state"
+
+            evidence_out: List[Any] = []
+            try:
+                ev = json.loads(r.get("evidence_json") or "[]")
+                if isinstance(ev, list):
+                    evidence_out = ev
+            except Exception:
+                evidence_out = []
+
+            if s not in nodes_by_id:
+                nodes_by_id[s] = {"id": s, "label": s, "type": "entity", "color": "#1f77b4", "entity_id": s_id}
+            if o not in nodes_by_id:
+                nodes_by_id[o] = {"id": o, "label": o, "type": "entity", "color": "#1f77b4", "entity_id": o_id}
+            if rel_id not in nodes_by_id:
+                nodes_by_id[rel_id] = {
+                    "id": rel_id,
+                    "label": p,
+                    "type": "relation_state",
+                    "color": "#999999",
+                    "time": valid_from,
+                    "valid_from": valid_from,
+                    "valid_to": valid_to,
+                    "interval_start": valid_from,
+                    "interval_end": valid_to,
+                    "predicate": p,
+                    "subject_entity_id": s_id,
+                    "object_entity_id": o_id,
+                    "state_text": str(r.get("state_text") or ""),
+                    "evidence": evidence_out,
+                    "relation_kind": relation_kind,
+                }
+
+            edges.append({"from": s, "to": rel_id, "type": "rel_in", "title": p, "time": valid_from})
+            edges.append({"from": rel_id, "to": o, "type": "rel_out", "title": p, "time": valid_from})
+
+        return {
+            "meta": {"graph_type": "EE_EVO", "generated_at": ""},
+            "nodes": list(nodes_by_id.values()),
+            "edges": edges,
+        }
+
+    def _collect_relation_state_intervals(
+        self, nodes_by_id: Dict[str, Dict[str, Any]]
+    ) -> Tuple[Dict[str, Tuple[datetime, Optional[datetime]]], datetime, datetime]:
+        rel_intervals: Dict[str, Tuple[datetime, Optional[datetime]]] = {}
+        min_dt: Optional[datetime] = None
+        max_dt: Optional[datetime] = None
+
+        for nid, n in nodes_by_id.items():
+            if str(n.get("type") or "").strip() != "relation_state":
+                continue
+            start_raw = str(n.get("interval_start") or n.get("valid_from") or n.get("time") or "").strip()
+            end_raw = str(n.get("interval_end") or n.get("valid_to") or "").strip()
+            start_dt = self._normalize_timestamp(start_raw)
+            if start_dt is None:
+                continue
+            end_dt = self._normalize_timestamp(end_raw) if end_raw else None
+            if end_dt is not None and end_dt < start_dt:
+                end_dt = None
+            rel_intervals[nid] = (start_dt, end_dt)
+
+            if min_dt is None or start_dt < min_dt:
+                min_dt = start_dt
+            cand_max = end_dt or start_dt
+            if max_dt is None or cand_max > max_dt:
+                max_dt = cand_max
+
+        now_utc = datetime.now(timezone.utc)
+        if min_dt is None:
+            min_dt = now_utc
+        if max_dt is None:
+            max_dt = now_utc
+        return rel_intervals, min_dt, max_dt
+
+    def _build_frames(
+        self,
+        rel_intervals: Dict[str, Tuple[datetime, Optional[datetime]]],
+        min_dt: datetime,
+        max_dt: datetime,
+        *,
+        mode: str,
+        frame_count: int,
+        max_frames: int = 500,
+    ) -> List[datetime]:
+        if mode == "关键点(valid_from)":
+            starts = sorted({itv[0] for itv in rel_intervals.values() if itv and itv[0]})
+            if not starts:
+                return [min_dt]
+            if len(starts) <= max_frames:
+                return starts
+            step = max(1, int(len(starts) / max_frames))
+            sampled = starts[::step]
+            if sampled and sampled[-1] != starts[-1]:
+                sampled.append(starts[-1])
+            return sampled[:max_frames]
+
+        if max_dt <= min_dt:
+            return [min_dt]
+
+        n = int(frame_count) if int(frame_count) > 1 else 2
+        n = min(n, max_frames)
+        total_sec = (max_dt - min_dt).total_seconds()
+        frames: List[datetime] = []
+        for i in range(n):
+            frac = i / float(n - 1) if n > 1 else 0.0
+            frames.append(min_dt + timedelta(seconds=total_sec * frac))
+        return frames
+
+    @staticmethod
+    def _build_evo_deltas(
+        frames: List[datetime],
+        rel_intervals: Dict[str, Tuple[datetime, Optional[datetime]]],
+    ) -> List[Dict[str, Any]]:
+        if not frames:
+            return []
+
+        def to_utc_naive(dt: datetime | None) -> datetime | None:
+            if dt is None:
+                return None
+            if dt.tzinfo:
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
+
+        frames2 = [to_utc_naive(dt) for dt in frames]
+        frames_utc = [dt for dt in frames2 if dt is not None]
+        if len(frames_utc) != len(frames2):
+            frames_utc = [dt for dt in frames2 if dt is not None]
+        if not frames_utc:
+            return []
+
+        enter_at: List[List[str]] = [[] for _ in range(len(frames_utc))]
+        exit_at: List[List[str]] = [[] for _ in range(len(frames_utc))]
+        f0 = frames_utc[0]
+
+        for rid, (start_dt, end_dt) in rel_intervals.items():
+            sdt = to_utc_naive(start_dt)
+            if sdt is None:
+                continue
+            edt = to_utc_naive(end_dt) if end_dt is not None else None
+            if edt is not None and edt < f0:
+                continue
+
+            enter_idx: int | None = None
+            if sdt <= f0 and (edt is None or f0 <= edt):
+                enter_idx = 0
+            else:
+                for i in range(1, len(frames_utc)):
+                    if frames_utc[i - 1] < sdt <= frames_utc[i]:
+                        enter_idx = i
+                        break
+            if enter_idx is not None:
+                enter_at[enter_idx].append(str(rid))
+
+            if edt is None:
+                continue
+            for i in range(len(frames_utc)):
+                if frames_utc[i] > edt and (i == 0 or frames_utc[i - 1] <= edt):
+                    exit_at[i].append(str(rid))
+                    break
+
+        out: List[Dict[str, Any]] = []
+        for i in range(len(frames_utc)):
+            d: Dict[str, Any] = {}
+            if enter_at[i]:
+                d["enter"] = sorted(set(enter_at[i]))
+            if exit_at[i]:
+                d["exit"] = sorted(set(exit_at[i]))
+            out.append(d)
+        return out
+
+    def _compute_positions(
+        self,
+        entity_ids: List[str],
+        rel_pairs: Dict[str, Tuple[str, str]],
+    ) -> Dict[str, Tuple[float, float]]:
+        pos: Dict[str, Tuple[float, float]] = {}
+        ents = sorted([str(x) for x in entity_ids if str(x).strip()])
+        n = len(ents) if ents else 1
+        radius = min(720.0, 260.0 + 6.0 * float(n))
+
+        for i, eid in enumerate(ents):
+            angle = 2.0 * math.pi * (float(i) / float(n))
+            x = radius * math.cos(angle)
+            y = radius * math.sin(angle)
+            pos[eid] = (x, y)
+
+        rel_ids_by_pair: Dict[Tuple[str, str], List[str]] = defaultdict(list)
+        for rel_id, (s, o) in rel_pairs.items():
+            if str(rel_id).strip() and str(s).strip() and str(o).strip():
+                rel_ids_by_pair[(s, o)].append(rel_id)
+
+        for (s, o), rel_ids in rel_ids_by_pair.items():
+            sp = pos.get(s)
+            op = pos.get(o)
+            rel_ids_sorted = sorted(rel_ids)
+            if sp is None or op is None:
+                for rel_id in rel_ids_sorted:
+                    h = int(hashlib.md5(str(rel_id).encode()).hexdigest()[:8], 16)
+                    angle = 2.0 * math.pi * ((h % 3600) / 3600.0)
+                    rr = min(220.0, radius * 0.45)
+                    pos[rel_id] = (rr * math.cos(angle), rr * math.sin(angle))
+                continue
+
+            sx, sy = sp
+            ox, oy = op
+            mx, my = (sx + ox) / 2.0, (sy + oy) / 2.0
+            dx, dy = (ox - sx), (oy - sy)
+            norm = math.hypot(dx, dy) or 1.0
+            px, py = (-dy / norm), (dx / norm)
+
+            hpair = int(hashlib.md5(f"{s}|{o}".encode()).hexdigest()[:8], 16)
+            sign = -1.0 if (hpair % 2) == 0 else 1.0
+            base_off = sign * 26.0
+            step = 18.0
+            center = (float(len(rel_ids_sorted)) - 1.0) / 2.0
+            for i, rel_id in enumerate(rel_ids_sorted):
+                off = base_off + (float(i) - center) * step
+                pos[rel_id] = (mx + px * off, my + py * off)
+        return pos
+
     def render(self) -> None:
         """渲染动态演化图谱"""
         st.subheader("⏱️ 动态演化图谱")
-        st.caption("显示实体关系随时间的变化")
-        
-        # 查询数据
-        kg_store = self._get_kg_store()
-        events = kg_store.fetch_events()
-        
-        if not events:
-            st.warning("无事件数据。")
-            return
-        
-        # 提取时间范围
-        timestamps = self._extract_timestamps(events)
-        
-        if not timestamps:
-            st.warning("无有效的时间戳数据。")
-            return
-        
-        timestamps.sort()
-        
-        # 时间滑块
-        st.markdown("**选择时间点**")
-        selected_time_idx = st.slider(
-            "时间轴",
-            0,
-            len(timestamps) - 1,
-            len(timestamps) - 1,
-            format="%d",
-            help="拖动查看不同时间点的关系状态"
-        )
-        
-        current_time = timestamps[selected_time_idx]
-        st.info(f"📅 当前时间：{current_time.strftime('%Y-%m-%d %H:%M')}")
-        
-        # 筛选到当前时间点的事件
-        events_until_now = []
-        for evt in events:
-            ts = evt.get("event_start_time") or evt.get("reported_at")
-            if ts:
+        st.caption("基于 EE_EVO 快照（relation_state 节点）展示关系随时间建立/消亡/强度变化")
+
+        with st.sidebar:
+            st.header("⏱️ 演化控制")
+            gen = st.button("生成/刷新五图谱快照", use_container_width=True)
+        if gen:
+            with st.spinner("生成快照中..."):
                 try:
-                    # 统一时区处理，避免naive和aware datetime比较错误
-                    if ts.endswith('Z'):
-                        dt = datetime.fromisoformat(ts[:-1] + "+00:00")
+                    from src.app.services_impl import get_kg_service
+
+                    res = get_kg_service().generate_snapshots()
+                    if not getattr(res, "success", False):
+                        st.error(f"快照生成失败: {getattr(res, 'error', '')}")
                     else:
-                        dt = datetime.fromisoformat(ts)
-                    if dt <= current_time:
-                        events_until_now.append(evt)
-                except Exception:
-                    pass
-        
-        st.caption(f"截至当前时间，共 {len(events_until_now)} 个事件")
-        
-        # 计算实体关系（基于截至当前的事件）
-        # 简化处理：显示提示信息
-        st.info("🚧 此功能需要更复杂的时序关系分析，当前显示为占位实现。")
-        st.markdown("""
-        **将实现的功能**：
-        - 按时间轴动态显示实体关系的建立与消亡
-        - 边的颜色深浅表示关系强度随时间的变化
-        - 支持动画播放，查看关系演变过程
-        """)
+                        st.success("快照生成完成")
+                except Exception as e:
+                    st.error(f"快照生成异常: {e}")
+
+        raw = self._load_snapshot_or_fallback()
+        if raw is None:
+            st.warning("未找到 EE_EVO 快照，也未能从 relation_states 构建数据。")
+            return
+
+        nodes = SnapshotTransformer.normalize_nodes(raw.get("nodes", []) if isinstance(raw, dict) else [])
+        edges = SnapshotTransformer.normalize_edges(raw.get("edges", []) if isinstance(raw, dict) else [])
+        meta = raw.get("meta", {}) if isinstance(raw, dict) else {}
+        report = validate_snapshot_dict({"meta": {"graph_type": "EE_EVO", **(meta if isinstance(meta, dict) else {})}, "nodes": nodes, "edges": edges})
+        st.info(f"📈 {GRAPH_TYPE_LABELS.get('EE_EVO','EE_EVO')}：{report['counts']['nodes']} 节点，{report['counts']['edges']} 边")
+        if not report.get("ok", False):
+            st.error("快照协议校验未通过（仍尝试渲染）")
+
+        nodes_by_id: Dict[str, Dict[str, Any]] = {
+            str(n.get("id")): n for n in nodes if isinstance(n, dict) and str(n.get("id", "")).strip()
+        }
+        rel_intervals, min_dt, max_dt = self._collect_relation_state_intervals(nodes_by_id)
+        if not rel_intervals:
+            st.warning("EE_EVO 中未找到 relation_state 节点或时间段字段。")
+            return
+
+        entity_candidates = sorted([str(n.get("id")) for n in nodes if str(n.get("type", "")) == "entity"])
+
+        with st.sidebar:
+            focus_enabled = st.checkbox("聚焦模式（2跳）", value=False)
+            focus_node = ""
+            if focus_enabled and entity_candidates:
+                focus_node = st.selectbox("聚焦实体", options=[""] + entity_candidates, index=0)
+            max_nodes = st.slider("最大节点数", 300, 1000, 500, 50)
+            max_edges = st.slider("最大边数", 600, 5000, 1000, 100)
+            display_mode = st.selectbox("显示模式", ["当前激活", "累积至当前"], index=0)
+            frame_mode = st.selectbox("帧生成", ["关键点(valid_from)", "等距"], index=0)
+            frame_count = st.slider("帧数（等距）", 10, 500, 160, 10, disabled=(frame_mode != "等距"))
+            speed_ms = st.slider("播放速度（毫秒）", 150, 2000, 450, 50)
+            use_react = st.checkbox("使用新前端渲染（React）", value=True)
+
+        snapshot2 = {"meta": meta, "nodes": nodes, "edges": edges}
+        if focus_node:
+            snapshot2 = SnapshotTransformer.filter_by_focus(snapshot2, focus_entity=focus_node, max_depth=2)
+        nodes2 = snapshot2.get("nodes", []) if isinstance(snapshot2, dict) else []
+        edges2 = snapshot2.get("edges", []) if isinstance(snapshot2, dict) else []
+
+        base_pyvis_nodes, base_pyvis_edges = SnapshotGraphRenderer()._build_pyvis_payload(
+            nodes2,
+            edges2,
+            focus_node=focus_node,
+            max_nodes=int(max_nodes),
+            max_edges=int(max_edges),
+            min_degree=0,
+        )
+        base_node_ids = [nid for nid, _ in base_pyvis_nodes]
+        if not base_node_ids:
+            st.warning("当前筛选条件下无可显示节点。")
+            return
+
+        base_edge_pairs = {(u, v) for u, v, _ in base_pyvis_edges}
+        base_nodes_by_id = {nid: nodes_by_id[nid] for nid in base_node_ids if nid in nodes_by_id}
+        base_edges = [e for e in edges2 if (str(e.get("from")), str(e.get("to"))) in base_edge_pairs]
+
+        base_rel_intervals, base_min_dt, base_max_dt = self._collect_relation_state_intervals(base_nodes_by_id)
+        frames = self._build_frames(base_rel_intervals, base_min_dt, base_max_dt, mode=frame_mode, frame_count=int(frame_count))
+        if not frames:
+            st.warning("无法生成时间轴帧。")
+            return
+
+        prefix = f"evo_{self.project_id}_"
+
+        if use_react:
+            try:
+                from src.web.components import evolution_graph
+            except Exception:
+                evolution_graph = None
+
+            rel_pairs: Dict[str, Tuple[str, str]] = {}
+            for e in base_edges:
+                u = str(e.get("from") or "").strip()
+                v = str(e.get("to") or "").strip()
+                if not u or not v:
+                    continue
+                if u in base_rel_intervals and v in base_nodes_by_id and str(base_nodes_by_id.get(v, {}).get("type")) == "entity":
+                    rel_pairs.setdefault(u, ("", ""))
+                    s, o = rel_pairs[u]
+                    rel_pairs[u] = (s, v)
+                if v in base_rel_intervals and u in base_nodes_by_id and str(base_nodes_by_id.get(u, {}).get("type")) == "entity":
+                    rel_pairs.setdefault(v, ("", ""))
+                    s, o = rel_pairs[v]
+                    rel_pairs[v] = (u, o)
+
+            rel_pairs = {rid: (s, o) for rid, (s, o) in rel_pairs.items() if s and o}
+            entity_ids_base = [nid for nid, n in base_nodes_by_id.items() if str(n.get("type") or "") == "entity"]
+            positions = self._compute_positions(entity_ids_base, rel_pairs)
+
+            deg: Dict[str, int] = defaultdict(int)
+            for e in base_edges:
+                u = str(e.get("from") or "").strip()
+                v = str(e.get("to") or "").strip()
+                if not u or not v:
+                    continue
+                deg[u] += 1
+                deg[v] += 1
+
+            frames_iso: List[str] = []
+            for dt in frames:
+                if dt.tzinfo:
+                    dt2 = dt.astimezone(timezone.utc)
+                else:
+                    dt2 = dt.replace(tzinfo=timezone.utc)
+                frames_iso.append(dt2.isoformat())
+
+            deltas = self._build_evo_deltas(frames, base_rel_intervals)
+
+            payload_nodes: List[Dict[str, Any]] = []
+            for nid, n in base_nodes_by_id.items():
+                if not isinstance(n, dict):
+                    continue
+                t = str(n.get("type") or "")
+                x, y = positions.get(nid, (0.0, 0.0))
+                if t == "relation_state":
+                    label = str(n.get("predicate") or n.get("label") or nid)
+                    title = GraphStyle.generate_relation_state_tooltip(n)
+                    payload_nodes.append(
+                        {
+                            "id": nid,
+                            "label": GraphStyle._truncate_label(label, limit=12),
+                            "type": "relation_state",
+                            "x": float(x),
+                            "y": float(y),
+                            "_ml_title": title,
+                            "predicate": n.get("predicate"),
+                            "evidence": n.get("evidence"),
+                            "evidence_count": n.get("evidence_count"),
+                            "interval_start": n.get("interval_start") or n.get("valid_from") or n.get("time") or "",
+                            "interval_end": n.get("interval_end") or n.get("valid_to") or "",
+                            "relation_kind": n.get("relation_kind") or "",
+                        }
+                    )
+                elif t == "entity":
+                    title = GraphStyle.generate_entity_tooltip(nid, {"count": deg.get(nid, 0)})
+                    payload_nodes.append(
+                        {
+                            "id": nid,
+                            "label": GraphStyle._truncate_label(nid),
+                            "type": "entity",
+                            "x": float(x),
+                            "y": float(y),
+                            "_ml_title": title,
+                        }
+                    )
+
+            payload_edges: List[Dict[str, Any]] = []
+            for i, e in enumerate(base_edges):
+                if not isinstance(e, dict):
+                    continue
+                u = str(e.get("from") or "").strip()
+                v = str(e.get("to") or "").strip()
+                if not u or not v:
+                    continue
+                title = str(e.get("title") or e.get("predicate") or "")
+                payload_edges.append(
+                    {
+                        "id": str(e.get("id") or f"e_{i}"),
+                        "from": u,
+                        "to": v,
+                        "type": str(e.get("type") or ""),
+                        "title": title,
+                        "_ml_title": title,
+                    }
+                )
+
+            payload = {
+                "nodes": payload_nodes,
+                "edges": payload_edges,
+                "frames": frames_iso,
+                "display_mode": display_mode,
+                "timeline": {
+                    "schema": "evo_timeline_v1",
+                    "schema_version": 1,
+                    "renderer_version": "evolution_graph_react_g6",
+                    "base_graph": {"nodes": payload_nodes, "edges": payload_edges},
+                    "frames": frames_iso,
+                    "deltas": deltas,
+                    "display_mode_default": display_mode,
+                },
+            }
+
+            if evolution_graph is not None:
+                out = evolution_graph(
+                    payload,
+                    height=760,
+                    initial_frame_idx=0,
+                    speed_ms=int(speed_ms),
+                    display_mode=display_mode,
+                    key=f"{prefix}react",
+                )
+            else:
+                out = None
+
+            if out is not None:
+                with st.expander("🎨 图例说明", expanded=False):
+                    st.markdown(
+                        f"""
+                        **强度**：边颜色灰/橙/红，对应证据条数 0-1 / 2-4 / ≥5  
+                        **建立**：绿色边（本帧新出现）  
+                        **消亡**：红色虚线边（本帧即将结束）
+                        **类型**：状态(state) 关系为蓝色边框；事件(event) 关系为橙色虚线
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                selected = str(out.get("selected") or "").strip()
+                if selected:
+                    st.info(f"已选择节点：{selected}")
+                return
+
+        playing_key = f"{prefix}playing"
+        frame_idx_key = f"{prefix}frame_idx"
+        frame_idx_state_key = f"{prefix}frame_idx_state"
+        frame_next_key = f"{prefix}frame_idx_next"
+        if playing_key not in st.session_state:
+            st.session_state[playing_key] = False
+        if frame_idx_state_key not in st.session_state:
+            if frame_idx_key in st.session_state:
+                st.session_state[frame_idx_state_key] = int(st.session_state.get(frame_idx_key, 0))
+            else:
+                st.session_state[frame_idx_state_key] = 0
+
+        if frame_next_key in st.session_state:
+            st.session_state[frame_idx_state_key] = int(st.session_state.get(frame_next_key, 0))
+            del st.session_state[frame_next_key]
+
+        st.session_state[frame_idx_state_key] = max(0, min(int(st.session_state[frame_idx_state_key]), len(frames) - 1))
+        st.session_state[frame_idx_key] = int(st.session_state[frame_idx_state_key])
+
+        col_ctrl_1, col_ctrl_2, col_ctrl_3, col_ctrl_4, col_ctrl_5 = st.columns([1, 1, 1, 1, 2])
+        with col_ctrl_1:
+            if st.button("⏮", key=f"{prefix}btn_first", use_container_width=True):
+                st.session_state[frame_idx_state_key] = 0
+                st.session_state[frame_idx_key] = 0
+                st.session_state[playing_key] = False
+                st.rerun()
+        with col_ctrl_2:
+            if st.button("◀", key=f"{prefix}btn_prev", use_container_width=True):
+                nxt = max(0, int(st.session_state[frame_idx_state_key]) - 1)
+                st.session_state[frame_idx_state_key] = nxt
+                st.session_state[frame_idx_key] = nxt
+                st.session_state[playing_key] = False
+                st.rerun()
+        with col_ctrl_3:
+            if st.button("▶/⏸", key=f"{prefix}btn_play", use_container_width=True):
+                will_play = not bool(st.session_state.get(playing_key))
+                if will_play and int(st.session_state.get(frame_idx_state_key, 0)) >= len(frames) - 1:
+                    st.session_state[frame_idx_state_key] = 0
+                    st.session_state[frame_idx_key] = 0
+                st.session_state[playing_key] = will_play
+                st.rerun()
+        with col_ctrl_4:
+            if st.button("▶", key=f"{prefix}btn_next", use_container_width=True):
+                nxt = min(len(frames) - 1, int(st.session_state[frame_idx_state_key]) + 1)
+                st.session_state[frame_idx_state_key] = nxt
+                st.session_state[frame_idx_key] = nxt
+                st.session_state[playing_key] = False
+                st.rerun()
+        with col_ctrl_5:
+            idx = st.slider("时间轴", 0, len(frames) - 1, key=frame_idx_key)
+
+        st.session_state[frame_idx_state_key] = max(0, min(int(idx), len(frames) - 1))
+
+        cur_idx = int(st.session_state[frame_idx_state_key])
+        cur_dt = frames[cur_idx]
+        cur_dt_naive = cur_dt.astimezone(timezone.utc).replace(tzinfo=None) if cur_dt.tzinfo else cur_dt
+        st.info(f"📅 当前时间：{cur_dt_naive.strftime('%Y-%m-%d %H:%M')}")
+
+        prev_dt = frames[cur_idx - 1] if cur_idx > 0 else None
+        next_dt = frames[cur_idx + 1] if cur_idx + 1 < len(frames) else None
+
+        rel_pairs: Dict[str, Tuple[str, str]] = {}
+        for e in base_edges:
+            u = str(e.get("from") or "").strip()
+            v = str(e.get("to") or "").strip()
+            if not u or not v:
+                continue
+            if u in base_rel_intervals and v in base_nodes_by_id and str(base_nodes_by_id.get(v, {}).get("type")) == "entity":
+                rel_pairs.setdefault(u, ("", ""))
+                s, o = rel_pairs[u]
+                rel_pairs[u] = (s, v)
+            if v in base_rel_intervals and u in base_nodes_by_id and str(base_nodes_by_id.get(u, {}).get("type")) == "entity":
+                rel_pairs.setdefault(v, ("", ""))
+                s, o = rel_pairs[v]
+                rel_pairs[v] = (u, o)
+
+        rel_pairs = {rid: (s, o) for rid, (s, o) in rel_pairs.items() if s and o}
+        entity_ids_base = [nid for nid, n in base_nodes_by_id.items() if str(n.get("type") or "") == "entity"]
+        positions = self._compute_positions(entity_ids_base, rel_pairs)
+
+        active_rel_ids: List[str] = []
+        for rid, (start_dt, end_dt) in base_rel_intervals.items():
+            sdt = start_dt.astimezone(timezone.utc).replace(tzinfo=None) if start_dt.tzinfo else start_dt
+            edt = end_dt.astimezone(timezone.utc).replace(tzinfo=None) if (end_dt and end_dt.tzinfo) else end_dt
+            if display_mode == "累积至当前":
+                if sdt <= cur_dt_naive:
+                    active_rel_ids.append(rid)
+            else:
+                if sdt <= cur_dt_naive and (edt is None or cur_dt_naive <= edt):
+                    active_rel_ids.append(rid)
+
+        visible_entities: Set[str] = set()
+        for rid in active_rel_ids:
+            s, o = rel_pairs.get(rid, ("", ""))
+            if s:
+                visible_entities.add(s)
+            if o:
+                visible_entities.add(o)
+        if focus_node:
+            visible_entities.add(focus_node)
+
+        deg: Dict[str, int] = defaultdict(int)
+        for e in base_edges:
+            u = str(e.get("from") or "").strip()
+            v = str(e.get("to") or "").strip()
+            if not u or not v:
+                continue
+            if u in visible_entities or v in visible_entities or (u in active_rel_ids) or (v in active_rel_ids):
+                deg[u] += 1
+                deg[v] += 1
+
+        pyvis_nodes: List[Tuple[str, Dict[str, Any]]] = []
+        for eid in sorted(visible_entities):
+            if eid not in base_nodes_by_id:
+                continue
+            is_focus = bool(focus_node) and eid == focus_node
+            d = deg.get(eid, 0)
+            size = min(22 + int(d / 3), 40)
+            color = GraphStyle.COLOR_ENTITY_FOCUS if is_focus else GraphStyle.COLOR_ENTITY_DEFAULT
+            x, y = positions.get(eid, (0.0, 0.0))
+            title = GraphStyle.generate_entity_tooltip(eid, {"count": d})
+            pyvis_nodes.append(
+                (
+                    eid,
+                    {
+                        "label": GraphStyle._truncate_label(eid),
+                        "color": color,
+                        "shape": GraphStyle.SHAPE_ENTITY,
+                        "size": size,
+                        "_ml_title": title,
+                        "font": GraphStyle.get_font_config(size, is_focus),
+                        "x": float(x),
+                        "y": float(y),
+                        "fixed": {"x": True, "y": True},
+                        "physics": False,
+                    },
+                )
+            )
+
+        def _ev_count(nid: str) -> int:
+            n = base_nodes_by_id.get(nid) or {}
+            ev = n.get("evidence")
+            if isinstance(ev, list):
+                return len(ev)
+            return int(n.get("evidence_count") or 0) if str(n.get("evidence_count") or "").strip() else 0
+
+        for rid in active_rel_ids:
+            n = base_nodes_by_id.get(rid)
+            if not isinstance(n, dict):
+                continue
+            x, y = positions.get(rid, (0.0, 0.0))
+            title = GraphStyle.generate_relation_state_tooltip(n)
+            label = str(n.get("predicate") or n.get("label") or rid)
+            pyvis_nodes.append(
+                (
+                    rid,
+                    {
+                        "label": GraphStyle._truncate_label(label, limit=12),
+                        "color": "#999999",
+                        "shape": "box",
+                        "size": 16,
+                        "_ml_title": title,
+                        "font": GraphStyle.get_font_config(16, False),
+                        "x": float(x),
+                        "y": float(y),
+                        "fixed": {"x": True, "y": True},
+                        "physics": False,
+                    },
+                )
+            )
+
+        pyvis_edges: List[Tuple[str, str, Dict[str, Any]]] = []
+        for rid in active_rel_ids:
+            s, o = rel_pairs.get(rid, ("", ""))
+            if not s or not o:
+                continue
+            if s not in visible_entities or o not in visible_entities:
+                continue
+            cnt = _ev_count(rid)
+            if cnt >= 5:
+                base_color = GraphStyle.COLOR_RELATION_STRONG
+            elif cnt >= 2:
+                base_color = GraphStyle.COLOR_RELATION_MEDIUM
+            else:
+                base_color = GraphStyle.COLOR_RELATION_WEAK
+
+            start_dt, end_dt = base_rel_intervals.get(rid, (None, None))
+            started_now = False
+            ending_soon = False
+            if start_dt is not None and prev_dt is not None:
+                sdt = start_dt.astimezone(timezone.utc).replace(tzinfo=None) if start_dt.tzinfo else start_dt
+                pdt = prev_dt.astimezone(timezone.utc).replace(tzinfo=None) if prev_dt.tzinfo else prev_dt
+                started_now = pdt < sdt <= cur_dt_naive
+            if end_dt is not None and next_dt is not None:
+                edt = end_dt.astimezone(timezone.utc).replace(tzinfo=None) if end_dt.tzinfo else end_dt
+                ndt = next_dt.astimezone(timezone.utc).replace(tzinfo=None) if next_dt.tzinfo else next_dt
+                ending_soon = cur_dt_naive < edt <= ndt
+
+            color = "#2ECC71" if started_now else ("#C0392B" if ending_soon else base_color)
+            opacity = min(0.92, 0.22 + 0.14 * float(min(5, max(0, cnt))))
+            width = 1 + int(min(5.0, max(0.0, math.sqrt(float(cnt) + 1.0))))
+            dashes = True if ending_soon else False
+
+            edge_title = f"{str(base_nodes_by_id.get(rid, {}).get('predicate') or '')} | evidence={cnt}"
+            pyvis_edges.append(
+                (
+                    s,
+                    rid,
+                    {
+                        "_ml_title": edge_title,
+                        "width": width,
+                        "color": {"color": color, "highlight": GraphStyle.COLOR_EDGE_HIGHLIGHT, "hover": GraphStyle.COLOR_EDGE_HIGHLIGHT, "opacity": opacity},
+                        "smooth": {"enabled": True, "type": "dynamic", "roundness": 0.25},
+                        "dashes": dashes,
+                    },
+                )
+            )
+            pyvis_edges.append(
+                (
+                    rid,
+                    o,
+                    {
+                        "_ml_title": edge_title,
+                        "width": width,
+                        "color": {"color": color, "highlight": GraphStyle.COLOR_EDGE_HIGHLIGHT, "hover": GraphStyle.COLOR_EDGE_HIGHLIGHT, "opacity": opacity},
+                        "smooth": {"enabled": True, "type": "dynamic", "roundness": 0.25},
+                        "dashes": dashes,
+                    },
+                )
+            )
+
+        if not pyvis_nodes or not pyvis_edges:
+            st.warning("当前时间点下无可显示的关系状态。")
+            return
+
+        self._render_pyvis(
+            nodes=pyvis_nodes,
+            edges=pyvis_edges,
+            layout_config={"physics": {"enabled": False}},
+            directed=True,
+        )
+
+        with st.expander("🎨 图例说明", expanded=False):
+            st.markdown(
+                f"""
+                **强度**：边颜色灰/橙/红，对应证据条数 0-1 / 2-4 / ≥5  
+                **建立**：绿色边（本帧新出现）  
+                **消亡**：红色虚线边（本帧即将结束）
+                """,
+                unsafe_allow_html=True,
+            )
+
+        if bool(st.session_state.get(playing_key)) and len(frames) > 1:
+            cur = int(st.session_state.get(frame_idx_state_key, 0))
+            nxt = min(len(frames) - 1, cur + 1)
+            if nxt == cur:
+                st.session_state[playing_key] = False
+            else:
+                st.session_state[frame_next_key] = nxt
+                time.sleep(max(0.05, float(speed_ms) / 1000.0))
+            st.rerun()
 
 
 class CausalGraphRenderer(GraphRenderer):

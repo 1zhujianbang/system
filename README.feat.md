@@ -2,9 +2,15 @@
 
 `feat`分支的当前版本主要更新了以下内容：
 
+v1.5
+- 新增关系类型字段 relation_kind 全链路支持（SQLite/JSON/Neo4j/快照/前端）
+- 新增离线回填与校验工具：backfill_relation_kind / build_event_observations / validate_events_against_signals / get_relation_timeline
+- 关系动态演化数据结构完善：relation_states 增加 relation_kind 与稳定 upsert，补齐测试覆盖
+- 文档更新：函数说明文档补齐迁移工具条目，新增图谱构建说明文档
+
 v1.4
 
-- Neo4j 迁移与验证工具：新增 `migrate_sqlite_to_neo4j` 工具与连接/迁移脚本
+- Neo4j 迁移工具：新增 `migrate_sqlite_to_neo4j`（从 SQLite 主存储导入 Neo4j）
 - LLM 池支持 Ollama（OpenAI 兼容接口）
 - Neo4j 图数据库支持：通过 `KG_STORE_BACKEND=neo4j|dual` 可切换/双写（配套 `NEO4J_URI/USER/PASSWORD`）
 

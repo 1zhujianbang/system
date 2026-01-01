@@ -1,6 +1,12 @@
 # MarketLens page branch update
 
 `page`分支的当前版本主要更新了以下内容：
+
+v1.2
+- EE_EVO 动态演化视图升级：引入 React EvolutionGraph 组件（时间轴/播放/布局稳定）
+- EE/EE_EVO 边字段扩展展示：支持 relation_kind（state/event）区分与样式编码
+- 快照视图诊断增强：缺失字段与 meta 计数一致性校验展示
+
 v1.1
 - 图谱悬停卡片增强：支持驻留、摘要/事件类型、涉及实体完整展示并可点击聚焦
 - GE 图新增事件类型聚焦筛选

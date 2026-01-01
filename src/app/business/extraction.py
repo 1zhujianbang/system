@@ -254,7 +254,56 @@ def llm_extract_events(
             allowed_entities = set(entities)
             seen_rel = set()
 
-            def _add_relation(s: str, p: str, o: str, ev: str = ""):
+            def _norm_relation_kind(v: Any) -> str:
+                s = str(v or "").strip().lower()
+                if not s:
+                    return ""
+                if s in {"state", "static", "persistent", "stative", "status"}:
+                    return "state"
+                if s in {"event", "dynamic", "action", "incident"}:
+                    return "event"
+                if s in {"静态", "状态", "持续", "事实"}:
+                    return "state"
+                if s in {"动态", "事件", "动作", "言语", "一次"}:
+                    return "event"
+                return ""
+
+            def _infer_relation_kind(predicate: str) -> str:
+                p = str(predicate or "").strip()
+                if not p:
+                    return ""
+                eventive = (
+                    "指责",
+                    "警告",
+                    "宣布",
+                    "否认",
+                    "回应",
+                    "制裁",
+                    "起诉",
+                    "逮捕",
+                    "调查",
+                    "袭击",
+                    "攻击",
+                    "签署",
+                    "批准",
+                    "通过",
+                    "驳回",
+                    "解雇",
+                    "任命",
+                    "收购",
+                    "合作",
+                    "谈判",
+                    "会见",
+                    "访问",
+                    "驱逐",
+                    "抗议",
+                )
+                for kw in eventive:
+                    if kw and kw in p:
+                        return "event"
+                return "state"
+
+            def _add_relation(s: str, p: str, o: str, ev: str = "", relation_kind: Any = ""):
                 ss = s.strip() if isinstance(s, str) else ""
                 pp = p.strip() if isinstance(p, str) else ""
                 oo = o.strip() if isinstance(o, str) else ""
@@ -265,7 +314,8 @@ def llm_extract_events(
                     return
                 if ss == oo:
                     return
-                key = (ss, pp, oo)
+                rk = _norm_relation_kind(relation_kind) or _infer_relation_kind(pp)
+                key = (ss, pp, oo, rk)
                 if key in seen_rel:
                     return
                 seen_rel.add(key)
@@ -273,6 +323,7 @@ def llm_extract_events(
                     "subject": ss,
                     "predicate": pp,
                     "object": oo,
+                    "relation_kind": rk,
                     "evidence": ee
                 })
 
@@ -286,14 +337,15 @@ def llm_extract_events(
                             rel.get("subject", ""),
                             rel.get("predicate", ""),
                             rel.get("object", ""),
-                            rel.get("evidence", "") or rel.get("text", "")
+                            rel.get("evidence", "") or rel.get("text", ""),
+                            rel.get("relation_kind", "") or rel.get("kind", "") or rel.get("type", ""),
                         )
                         continue
                     # 兼容 tuple/list 形式：[s,p,o] 或 [s,p,o,evidence]
                     if isinstance(rel, (list, tuple)) and len(rel) >= 3:
                         s, p, o = rel[0], rel[1], rel[2]
                         ev = rel[3] if len(rel) >= 4 else ""
-                        _add_relation(s, p, o, ev)
+                        _add_relation(s, p, o, ev, "")
 
             summary = item.get("event_summary", "").strip()
             if abstract and entities and summary:

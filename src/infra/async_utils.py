@@ -295,6 +295,9 @@ def create_extraction_prompt(
    - 实体关系三元组 relations：列表形式的 (实体, 关系, 实体)。要求：
      * subject/object 必须严格来自 entities 列表（不要造新实体名）
      * predicate 用中文动词短语或关系短语，方向明确（例如"公开指责""警告""制裁""批准""起诉""收购""合作""调查""宣布""否认""回应"）
+     * relation_kind 用于区分关系的“时态/稳定性”（二选一）：
+       - "state"：状态型/持续型关系（例如“隶属/任职/位于/持股/盟友/合作中”等，默认认为会持续到下一次明确变更）
+       - "event"：事件型/一次性动作或言语关系（例如“起诉/制裁/签署/攻击/指责/宣布/否认”等，发生即为一次证据点，不默认长期持续）
      * 仅输出你能从新闻中直接支持的关系；不确定就不输出
      * 不要输出同义重复（同一 subject/predicate/object 只保留一条）
      * 每条关系可附带 evidence（新闻原文支撑片段，尽量短）
@@ -314,7 +317,7 @@ def create_extraction_prompt(
       "entities_original": ["原始表述1", "原始表述2"],
       "entity_roles": {{"实体1": ["角色1"], "实体2": ["角色2"]}},
       "relations": [
-        {{"subject": "实体1", "predicate": "关系", "object": "实体2", "evidence": "原文支撑片段"}}
+        {{"subject": "实体1", "predicate": "关系", "object": "实体2", "relation_kind": "state", "evidence": "原文支撑片段"}}
       ],
       "event_summary": "事件描述"
     }}
