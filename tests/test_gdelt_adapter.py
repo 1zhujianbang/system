@@ -16,6 +16,16 @@ def test_gdelt_build_query_keywords() -> None:
     query = adapter._build_query(FetchConfig(keywords=["China", "trade war"]))
     assert query == 'China "trade war"'
 
+def test_gdelt_build_query_with_language_filter() -> None:
+    adapter = GDELTAdapter(language="en")
+    query = adapter._build_query(FetchConfig(keywords=["China"]))
+    assert query.startswith("sourcelang:eng ")
+
+def test_gdelt_build_query_default_is_not_single_letter() -> None:
+    adapter = GDELTAdapter()
+    query = adapter._build_query(FetchConfig())
+    assert "domain:com" in query
+
 
 def test_gdelt_convert_v2_doc_dedup_and_fields() -> None:
     adapter = GDELTAdapter()
@@ -63,7 +73,7 @@ def test_gdelt_fetch_happy_path_without_network() -> None:
         ]
     }
 
-    async def fake_fetch_json(url: str, params: dict, timeout: float):
+    async def fake_fetch_json(url: str, params: dict, timeout: float, session: object | None = None):
         assert "query" in params
         return sample
 
@@ -85,7 +95,7 @@ def test_gdelt_fetch_time_intervals_without_network() -> None:
     adapter = GDELTAdapter()
     calls = []
 
-    async def fake_fetch_json(url: str, params: dict, timeout: float):
+    async def fake_fetch_json(url: str, params: dict, timeout: float, session: object | None = None):
         calls.append(params)
         start_dt = params.get("startdatetime") or "NA"
         return {
@@ -114,6 +124,74 @@ def test_gdelt_fetch_time_intervals_without_network() -> None:
     assert result.success is True
     assert result.total_fetched == 2
     assert len(calls) >= 2
+
+
+def test_gdelt_unbounded_uses_larger_default_max_intervals() -> None:
+    adapter = GDELTAdapter()
+    captured = {}
+
+    async def fake_fetch_by_time_intervals(
+        config,
+        *,
+        max_items: int,
+        per_page: int,
+        timeout: float,
+        interval_minutes: int,
+        max_intervals: int,
+        already_seen=None,
+        session=None,
+    ):
+        captured["max_intervals"] = max_intervals
+        return ([], 0)
+
+    adapter._fetch_v2_doc_by_time_intervals = fake_fetch_by_time_intervals  # type: ignore[assignment]
+
+    now = datetime(2025, 12, 27, 12, 0, 0, tzinfo=timezone.utc)
+    cfg = FetchConfig(
+        max_items=0,
+        language="en",
+        keywords=["test"],
+        from_date=now - timedelta(hours=2),
+        to_date=now,
+        extra={"gdelt": {"page_strategy": "time_intervals", "interval_minutes": 60, "per_page": 1}},
+    )
+    result = asyncio.run(adapter.fetch(cfg))
+    assert result.success is True
+    assert int(captured["max_intervals"]) > 80
+
+
+def test_gdelt_bounded_keeps_default_max_intervals() -> None:
+    adapter = GDELTAdapter()
+    captured = {}
+
+    async def fake_fetch_by_time_intervals(
+        config,
+        *,
+        max_items: int,
+        per_page: int,
+        timeout: float,
+        interval_minutes: int,
+        max_intervals: int,
+        already_seen=None,
+        session=None,
+    ):
+        captured["max_intervals"] = max_intervals
+        return ([], 0)
+
+    adapter._fetch_v2_doc_by_time_intervals = fake_fetch_by_time_intervals  # type: ignore[assignment]
+
+    now = datetime(2025, 12, 27, 12, 0, 0, tzinfo=timezone.utc)
+    cfg = FetchConfig(
+        max_items=5,
+        language="en",
+        keywords=["test"],
+        from_date=now - timedelta(hours=2),
+        to_date=now,
+        extra={"gdelt": {"page_strategy": "time_intervals", "interval_minutes": 60, "per_page": 1}},
+    )
+    result = asyncio.run(adapter.fetch(cfg))
+    assert result.success is True
+    assert int(captured["max_intervals"]) == 80
 
 
 def test_gdelt_extract_text_from_html_basic() -> None:

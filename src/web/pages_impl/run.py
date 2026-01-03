@@ -109,6 +109,10 @@ def render() -> None:
         df_sources = st.session_state.ingestion_apis
         selected_sources = df_sources[df_sources["enabled"] == True]["name"].tolist()
 
+    has_any_gdelt = any(str(s or "").strip().lower().startswith("gdelt") for s in selected_sources)
+    if not has_any_gdelt:
+        selected_sources.append("GDELT")
+
     # 显示数据源信息
     st.info(f"📡 数据源: {', '.join(selected_sources[:3])}{'...' if len(selected_sources) > 3 else ''} ({len(selected_sources)} 个)")
     
@@ -123,7 +127,7 @@ def render() -> None:
                     "id": "fetch_news",
                     "tool": "fetch_news_stream",
                     "inputs": {
-                        "limit": 10,
+                        "limit": 100,
                         "sources": selected_sources,
                         "from_": from_val,
                         "to": to_val,

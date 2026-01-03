@@ -74,14 +74,14 @@ async def fetch_news_stream(
         tools.log("Warning: No valid sources to fetch from. API密钥可能未配置。")
         return []
 
+    gdelt_sources = [s for s in target_sources if str(s or "").strip().lower().startswith("gdelt")]
+    other_sources = [s for s in target_sources if s not in gdelt_sources]
+
     # 如果启用了按天递增请求，并且提供了from_和to_参数
     if daily_incremental and from_ and to:
         tools.log(f"[fetch_news_stream] 启用按天递增请求: 从 {from_} 到 {to}")
         all_news = []
-        
-        # 定义所有可用的类别
-        categories = ["general", "world", "nation", "business", "technology", "entertainment", "sports", "science", "health"]
-        
+
         # 解析日期
         try:
             from_date = datetime.fromisoformat(from_.replace("Z", "+00:00")).date()
@@ -96,17 +96,37 @@ async def fetch_news_stream(
                 
                 tools.log(f"[fetch_news_stream] 请求 {current_date.isoformat()} 的数据")
                 
-                # 为每个类别获取数据
                 day_news = []
-                for cat in categories:
-                    tools.log(f"[fetch_news_stream] 请求 {current_date.isoformat()} 的 {cat} 类别数据")
-                    cat_news = await fetch_from_multiple_sources(
+                if other_sources:
+                    tools.log(f"[fetch_news_stream] 请求 {current_date.isoformat()} 的非 GDELT 数据源 (limit={int(limit)})")
+                    day_news.extend(
+                        await fetch_from_multiple_sources(
+                            api_pool=api_pool,
+                            source_names=other_sources,
+                            concurrency_limit=concurrency,
+                            query=query,
+                            category=category,
+                            limit=limit,
+                            from_=day_start,
+                            to=day_end,
+                            nullable=nullable,
+                            truncate=truncate,
+                            sortby=sortby,
+                            in_fields=in_fields,
+                            page=page,
+                        )
+                    )
+
+                if gdelt_sources:
+                    gdelt_limit = int(limit) * 9
+                    tools.log(f"[fetch_news_stream] 请求 {current_date.isoformat()} 的 GDELT (limit={gdelt_limit})")
+                    gdelt_news = await fetch_from_multiple_sources(
                         api_pool=api_pool,
-                        source_names=target_sources,
+                        source_names=gdelt_sources,
                         concurrency_limit=concurrency,
                         query=query,
-                        category=cat,
-                        limit=limit,
+                        category=category,
+                        limit=gdelt_limit,
                         from_=day_start,
                         to=day_end,
                         nullable=nullable,
@@ -115,8 +135,8 @@ async def fetch_news_stream(
                         in_fields=in_fields,
                         page=page,
                     )
-                    day_news.extend(cat_news)
-                    tools.log(f"[fetch_news_stream] {current_date.isoformat()} 的 {cat} 类别获取到 {len(cat_news)} 条数据")
+                    day_news.extend(gdelt_news)
+                    tools.log(f"[fetch_news_stream] {current_date.isoformat()} 的 GDELT 合并抓取到 {len(gdelt_news)} 条数据")
                 
                 all_news.extend(day_news)
                 tools.log(f"[fetch_news_stream] {current_date.isoformat()} 总共获取到 {len(day_news)} 条数据")
@@ -145,30 +165,194 @@ async def fetch_news_stream(
         tools.log(f"[fetch_news_stream] 按天递增请求完成，总共获取到 {len(all_news)} 条数据")
         return all_news
     else:
-        # 如果指定了类别，则只使用该类别；否则遍历所有类别
-        categories = ["general", "world", "nation", "business", "technology", "entertainment", "sports", "science", "health"]
-        
-        # 为每个类别获取数据并合并
-        all_news = []
-        for cat in categories:
-            cat_news = await fetch_from_multiple_sources(
-                api_pool=api_pool,
-                source_names=target_sources,
-                concurrency_limit=concurrency,
-                query=query,
-                category=cat,
-                limit=limit,
-                from_=from_,
-                to=to,
-                nullable=nullable,
-                truncate=truncate,
-                sortby=sortby,
-                in_fields=in_fields,
-                page=page,
+        all_news: List[Dict[str, Any]] = []
+        if other_sources:
+            all_news.extend(
+                await fetch_from_multiple_sources(
+                    api_pool=api_pool,
+                    source_names=other_sources,
+                    concurrency_limit=concurrency,
+                    query=query,
+                    category=category,
+                    limit=limit,
+                    from_=from_,
+                    to=to,
+                    nullable=nullable,
+                    truncate=truncate,
+                    sortby=sortby,
+                    in_fields=in_fields,
+                    page=page,
+                )
             )
-            all_news.extend(cat_news)
-        
+
+        if gdelt_sources:
+            gdelt_limit = int(limit) * 9
+            all_news.extend(
+                await fetch_from_multiple_sources(
+                    api_pool=api_pool,
+                    source_names=gdelt_sources,
+                    concurrency_limit=concurrency,
+                    query=query,
+                    category=category,
+                    limit=gdelt_limit,
+                    from_=from_,
+                    to=to,
+                    nullable=nullable,
+                    truncate=truncate,
+                    sortby=sortby,
+                    in_fields=in_fields,
+                    page=page,
+                )
+            )
+
         return all_news
+
+
+@register_tool(
+    name="benchmark_gdelt_extraction",
+    description="[Benchmark] 仅 GDELT：抓取并抽取事件，输出数量与文本指标（不写入存储）",
+    category="Benchmark"
+)
+async def benchmark_gdelt_extraction(
+    limit: int = 200,
+    query: Optional[str] = None,
+    from_: Optional[str] = None,
+    to: Optional[str] = None,
+    sources: Optional[List[str]] = None,
+    max_articles: int = 30,
+    max_retries: int = 1,
+) -> Dict[str, Any]:
+    tools = Tools()
+    t0 = time.monotonic()
+
+    config_manager = get_config_manager()
+    concurrency = config_manager.get_concurrency_limit("agent1_config")
+
+    news_pool = NewsAPIManager.get_instance()
+    available_sources = news_pool.list_available_sources()
+    default_gdelt_sources = [s for s in available_sources if str(s or "").strip().lower().startswith("gdelt")]
+    target_sources = sources if sources else default_gdelt_sources
+    target_sources = [s for s in (target_sources or []) if s in available_sources]
+    if not target_sources:
+        return {
+            "success": False,
+            "error": "No available GDELT sources",
+            "available_sources": available_sources,
+        }
+
+    tools.log(f"[benchmark_gdelt_extraction] sources={target_sources}, limit={limit}, max_articles={max_articles}")
+
+    fetch_t0 = time.monotonic()
+    raw_news = await fetch_from_multiple_sources(
+        api_pool=news_pool,
+        source_names=target_sources,
+        concurrency_limit=concurrency,
+        query=query,
+        limit=int(limit),
+        from_=from_,
+        to=to,
+    )
+    fetch_ms = (time.monotonic() - fetch_t0) * 1000
+
+    seen_url: Set[str] = set()
+    dedup_news: List[Dict[str, Any]] = []
+    for item in raw_news or []:
+        url = str(item.get("url") or "").strip()
+        if not url or url in seen_url:
+            continue
+        seen_url.add(url)
+        dedup_news.append(item)
+
+    if max_articles is not None and int(max_articles) > 0:
+        dedup_news = dedup_news[: int(max_articles)]
+
+    llm_pool = get_llm_pool()
+
+    extraction_t0 = time.monotonic()
+    extracted_events_total = 0
+    extracted_entities_total = 0
+    extracted_relations_total = 0
+    title_chars_total = 0
+    content_chars_total = 0
+    sample_abstracts: List[str] = []
+
+    per_article: List[Dict[str, Any]] = []
+    for n in dedup_news:
+        title = str(n.get("title") or "")
+        content = str(n.get("content") or "")
+        title_chars_total += len(title)
+        content_chars_total += len(content)
+
+        reported_at = str(n.get("datetime") or "").strip() or None
+        events = llm_extract_events(
+            title=title,
+            content=content,
+            api_pool=llm_pool,
+            max_retries=max_retries,
+            reported_at=reported_at,
+        )
+        ev_cnt = len(events or [])
+        extracted_events_total += ev_cnt
+        ent_cnt = 0
+        rel_cnt = 0
+        for ev in events or []:
+            if isinstance(ev, dict):
+                ent_cnt += len(ev.get("entities") or [])
+                rel_cnt += len(ev.get("relations") or [])
+                if len(sample_abstracts) < 8:
+                    abs1 = str(ev.get("abstract") or "").strip()
+                    if abs1:
+                        sample_abstracts.append(abs1)
+        extracted_entities_total += ent_cnt
+        extracted_relations_total += rel_cnt
+
+        per_article.append(
+            {
+                "url": str(n.get("url") or ""),
+                "source": str(n.get("source") or ""),
+                "datetime": str(n.get("datetime") or ""),
+                "title_chars": len(title),
+                "content_chars": len(content),
+                "events": ev_cnt,
+                "entities": ent_cnt,
+                "relations": rel_cnt,
+            }
+        )
+
+    extraction_ms = (time.monotonic() - extraction_t0) * 1000
+    total_ms = (time.monotonic() - t0) * 1000
+
+    articles_fetched = int(len(raw_news or []))
+    articles_deduped = int(len(seen_url))
+    articles_processed = int(len(dedup_news))
+
+    avg_events = (extracted_events_total / articles_processed) if articles_processed else 0.0
+    avg_title_chars = (title_chars_total / articles_processed) if articles_processed else 0.0
+    avg_content_chars = (content_chars_total / articles_processed) if articles_processed else 0.0
+
+    return {
+        "success": True,
+        "sources": target_sources,
+        "query": query,
+        "from": from_,
+        "to": to,
+        "articles_fetched": articles_fetched,
+        "articles_deduped": articles_deduped,
+        "articles_processed": articles_processed,
+        "events_total": int(extracted_events_total),
+        "entities_total": int(extracted_entities_total),
+        "relations_total": int(extracted_relations_total),
+        "avg_events_per_article": avg_events,
+        "title_chars_total": int(title_chars_total),
+        "content_chars_total": int(content_chars_total),
+        "avg_title_chars": avg_title_chars,
+        "avg_content_chars": avg_content_chars,
+        "fetch_ms": fetch_ms,
+        "extraction_ms": extraction_ms,
+        "total_ms": total_ms,
+        "sample_abstracts": sample_abstracts,
+        "per_article": per_article,
+    }
 
 def _load_entity_equivs() -> Dict[str, Set[str]]:
     """
@@ -771,4 +955,3 @@ async def expand_news_by_recent_entities(
         return {"processed_count": processed_count, "expanded_news_count": len(expanded_news)}
 
     return {"processed_count": 0, "expanded_news_count": 0}
-

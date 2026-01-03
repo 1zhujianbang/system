@@ -284,6 +284,16 @@ class NewsAPIManager(NewsSourcePool):
             {"name": "GNews-es", "language": "es", "country": "es"},
             {"name": "GNews-it", "language": "it", "country": "it"},
             {"name": "GNews-in", "language": "en", "country": "in"},
+            {"name": "GNews-il", "language": "he", "country": "il"},
+            {"name": "GNews-sa", "language": "ar", "country": "sa"},
+            {"name": "GNews-tr", "language": "tr", "country": "tr"},
+            {"name": "GNews-nl", "language": "nl", "country": "nl"},
+            {"name": "GNews-se", "language": "sv", "country": "se"},
+            {"name": "GNews-no", "language": "no", "country": "no"},
+            {"name": "GNews-pl", "language": "pl", "country": "pl"},
+            {"name": "GNews-gr", "language": "el", "country": "gr"},
+            {"name": "GNews-th", "language": "th", "country": "th"},
+            {"name": "GNews-id", "language": "id", "country": "id"},
         ]
 
         for idx, cfg in enumerate(default_configs):
@@ -298,8 +308,20 @@ class NewsAPIManager(NewsSourcePool):
                 self.register(source)
         
         # 注册GDELT数据源
-        gdelt_source = GDELTAdapter(name="GDELT")
-        self.register(gdelt_source)
+        self.register(GDELTAdapter(name="GDELT", language="any"))
+        self.register(GDELTAdapter(name="GDELT-zh", language="zh"))
+        self.register(GDELTAdapter(name="GDELT-en", language="en"))
+        self.register(GDELTAdapter(name="GDELT-es", language="es"))
+        self.register(GDELTAdapter(name="GDELT-fr", language="fr"))
+        self.register(GDELTAdapter(name="GDELT-de", language="de"))
+        self.register(GDELTAdapter(name="GDELT-ru", language="ru"))
+        self.register(GDELTAdapter(name="GDELT-ja", language="ja"))
+        self.register(GDELTAdapter(name="GDELT-ko", language="ko"))
+        self.register(GDELTAdapter(name="GDELT-pt", language="pt"))
+        self.register(GDELTAdapter(name="GDELT-ar", language="ar"))
+        self.register(GDELTAdapter(name="GDELT-he", language="he"))
+        self.register(GDELTAdapter(name="GDELT-tr", language="tr"))
+        self.register(GDELTAdapter(name="GDELT-id", language="id"))
 
     def get_collector(self, name: str) -> Optional[Any]:
         """兼容旧 API：获取收集器（支持动态创建）"""
@@ -318,6 +340,9 @@ class NewsAPIManager(NewsSourcePool):
                     "fr": "fr", "de": "de", "jp": "ja", "kr": "ko",
                     "ru": "ru", "ua": "uk", "br": "pt", "ar": "es",
                     "mx": "es", "es": "es", "it": "it", "in": "en",
+                    "il": "he", "sa": "ar", "tr": "tr", "nl": "nl",
+                    "se": "sv", "no": "no", "pl": "pl", "gr": "el",
+                    "th": "th", "id": "id",
                 }
                 language = lang_map.get(country, "en")
                 api_key = self._api_key_pool[len(self._sources) % len(self._api_key_pool)]

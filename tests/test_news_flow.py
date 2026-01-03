@@ -341,3 +341,79 @@ def test_fetch_and_extract_multi_sources_smoke_print_result(monkeypatch, extract
     print(json.dumps(events, ensure_ascii=False, indent=2))
     assert isinstance(events, list) and len(events) == 2
 
+
+def test_benchmark_gdelt_extraction_only_gdelt(monkeypatch) -> None:
+    from src.app.business import data_fetch as data_fetch_mod
+
+    class FakeConfigManager:
+        def get_concurrency_limit(self, _name: str) -> int:
+            return 1
+
+    class FakeNewsPool:
+        def list_available_sources(self):
+            return ["GDELT-en", "GNews-us"]
+
+    async def fake_fetch_from_multiple_sources(*, api_pool, source_names, concurrency_limit, query=None, limit=0, from_=None, to=None, **kwargs):
+        assert api_pool is not None
+        assert source_names == ["GDELT-en"]
+        assert concurrency_limit == 1
+        assert int(limit) == 10
+        return [
+            {
+                "id": "gd1",
+                "source": "GDELT-en",
+                "url": "https://gdelt.example/a",
+                "datetime": "2025-12-27T00:00:00Z",
+                "title": "t1",
+                "content": "c1",
+            },
+            {
+                "id": "gd2",
+                "source": "GDELT-en",
+                "url": "https://gdelt.example/a",
+                "datetime": "2025-12-27T00:00:01Z",
+                "title": "t2",
+                "content": "c2",
+            },
+            {
+                "id": "gd3",
+                "source": "GDELT-en",
+                "url": "https://gdelt.example/b",
+                "datetime": "2025-12-27T00:00:02Z",
+                "title": "t3",
+                "content": "c3",
+            },
+        ]
+
+    def fake_llm_extract_events(*, title, content, api_pool, max_retries=1, reported_at=None):
+        assert api_pool is not None
+        assert isinstance(title, str)
+        assert isinstance(content, str)
+        return [
+            {"abstract": f"{title}:{content}", "entities": ["A", "B"], "relations": [{"a": 1}]},
+            {"abstract": f"{title}:{content}:2", "entities": ["C"], "relations": []},
+        ]
+
+    monkeypatch.setattr(data_fetch_mod, "get_config_manager", lambda: FakeConfigManager())
+    monkeypatch.setattr(data_fetch_mod.NewsAPIManager, "get_instance", staticmethod(lambda: FakeNewsPool()))
+    monkeypatch.setattr(data_fetch_mod, "fetch_from_multiple_sources", fake_fetch_from_multiple_sources)
+    monkeypatch.setattr(data_fetch_mod, "get_llm_pool", lambda: object())
+    monkeypatch.setattr(data_fetch_mod, "llm_extract_events", fake_llm_extract_events)
+
+    out = asyncio.run(
+        data_fetch_mod.benchmark_gdelt_extraction(
+            limit=10,
+            query="finance",
+            max_articles=2,
+            max_retries=1,
+        )
+    )
+    assert out["success"] is True
+    assert out["sources"] == ["GDELT-en"]
+    assert out["articles_fetched"] == 3
+    assert out["articles_deduped"] == 2
+    assert out["articles_processed"] == 2
+    assert out["events_total"] == 4
+    assert out["entities_total"] == 6
+    assert out["relations_total"] == 2
+

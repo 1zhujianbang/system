@@ -376,9 +376,61 @@ class KnowledgeGraphServiceImpl(KnowledgeGraphService):
         conn = self._connect_db()
         try:
             row = conn.execute(
-                "SELECT entity_id, name, first_seen, last_seen, sources_json, original_forms_json FROM entities WHERE name=?",
-                (name,),
+                """
+                SELECT
+                    e.entity_id AS entity_id,
+                    COALESCE(mn.main_name, e.name) AS name,
+                    e.first_seen AS first_seen,
+                    e.last_seen AS last_seen,
+                    e.sources_json AS sources_json,
+                    e.original_forms_json AS original_forms_json
+                FROM entities e
+                LEFT JOIN entity_main_names mn ON mn.entity_id = e.entity_id
+                WHERE mn.main_name=? OR e.name=?
+                LIMIT 1
+                """,
+                (name, name),
             ).fetchone()
+            if row is None:
+                alias_row = conn.execute(
+                    """
+                    SELECT e.entity_id AS entity_id
+                    FROM entity_aliases a
+                    JOIN entities e ON e.entity_id = a.entity_id
+                    WHERE a.alias=?
+                    LIMIT 1
+                    """,
+                    (name,),
+                ).fetchone()
+                if alias_row is None:
+                    return None
+                entity_id = str(alias_row["entity_id"] or "")
+                for _ in range(20):
+                    red = conn.execute(
+                        "SELECT to_entity_id FROM entity_redirects WHERE from_entity_id=?",
+                        (entity_id,),
+                    ).fetchone()
+                    if red is None:
+                        break
+                    nxt = str(red["to_entity_id"] or "")
+                    if not nxt or nxt == entity_id:
+                        break
+                    entity_id = nxt
+                row = conn.execute(
+                    """
+                    SELECT
+                        e.entity_id AS entity_id,
+                        COALESCE(mn.main_name, e.name) AS name,
+                        e.first_seen AS first_seen,
+                        e.last_seen AS last_seen,
+                        e.sources_json AS sources_json,
+                        e.original_forms_json AS original_forms_json
+                    FROM entities e
+                    LEFT JOIN entity_main_names mn ON mn.entity_id = e.entity_id
+                    WHERE e.entity_id=?
+                    """,
+                    (entity_id,),
+                ).fetchone()
             if row is None:
                 return None
             aliases_rows = conn.execute(
@@ -415,8 +467,14 @@ class KnowledgeGraphServiceImpl(KnowledgeGraphService):
         conn = self._connect_db()
         try:
             row = conn.execute(
-                "SELECT * FROM events WHERE abstract=?",
-                (abs_key,),
+                """
+                SELECT e.*
+                FROM events e
+                LEFT JOIN event_main_abstracts ma ON ma.event_id = e.event_id
+                WHERE ma.main_abstract=? OR e.abstract=?
+                LIMIT 1
+                """,
+                (abs_key, abs_key),
             ).fetchone()
             if row is None:
                 alias_row = conn.execute(

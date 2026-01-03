@@ -26,7 +26,13 @@ class SQLiteKGReadStore(KGReadStore):
     def fetch_entities(self) -> List[Dict[str, Any]]:
         conn = self._connect()
         try:
-            rows = conn.execute("SELECT entity_id, name, first_seen FROM entities").fetchall()
+            rows = conn.execute(
+                """
+                SELECT e.entity_id AS entity_id, COALESCE(mn.main_name, e.name) AS name, e.first_seen AS first_seen
+                FROM entities e
+                LEFT JOIN entity_main_names mn ON mn.entity_id = e.entity_id
+                """
+            ).fetchall()
             return [dict(r) for r in rows]
         finally:
             conn.close()
@@ -36,9 +42,16 @@ class SQLiteKGReadStore(KGReadStore):
         try:
             rows = conn.execute(
                 """
-                SELECT event_id, abstract, event_summary, event_types_json,
-                       event_start_time, reported_at, first_seen
-                FROM events
+                SELECT
+                    e.event_id AS event_id,
+                    COALESCE(ma.main_abstract, e.abstract) AS abstract,
+                    e.event_summary AS event_summary,
+                    e.event_types_json AS event_types_json,
+                    e.event_start_time AS event_start_time,
+                    e.reported_at AS reported_at,
+                    e.first_seen AS first_seen
+                FROM events e
+                LEFT JOIN event_main_abstracts ma ON ma.event_id = e.event_id
                 """
             ).fetchall()
             return [dict(r) for r in rows]
@@ -51,9 +64,11 @@ class SQLiteKGReadStore(KGReadStore):
             rows = conn.execute(
                 """
                 SELECT p.event_id, p.entity_id, p.roles_json, p.time AS time,
-                       e.abstract, e.event_summary, e.event_start_time, e.reported_at AS evt_reported_at, e.first_seen
+                       COALESCE(ma.main_abstract, e.abstract) AS abstract,
+                       e.event_summary, e.event_start_time, e.reported_at AS evt_reported_at, e.first_seen
                 FROM participants p
                 JOIN events e ON e.event_id = p.event_id
+                LEFT JOIN event_main_abstracts ma ON ma.event_id = e.event_id
                 """
             ).fetchall()
             return [dict(r) for r in rows]
@@ -139,7 +154,9 @@ class SQLiteKGReadStore(KGReadStore):
             return ""
         conn = self._connect()
         try:
-            row = conn.execute("SELECT event_id FROM events WHERE abstract=?", (a,)).fetchone()
+            row = conn.execute("SELECT event_id FROM event_main_abstracts WHERE main_abstract=?", (a,)).fetchone()
+            if row is None:
+                row = conn.execute("SELECT event_id FROM events WHERE abstract=?", (a,)).fetchone()
             if row is None:
                 row = conn.execute("SELECT event_id FROM event_aliases WHERE abstract=?", (a,)).fetchone()
             if row is None:
@@ -193,7 +210,7 @@ class SQLiteKGReadStore(KGReadStore):
                 """
                 SELECT DISTINCT
                     e.event_id,
-                    e.abstract,
+                    COALESCE(ma.main_abstract, e.abstract) AS abstract,
                     e.event_summary,
                     e.event_start_time,
                     e.reported_at,
@@ -201,10 +218,13 @@ class SQLiteKGReadStore(KGReadStore):
                 FROM events e
                 JOIN participants p ON e.event_id = p.event_id
                 JOIN entities ent ON p.entity_id = ent.entity_id
-                WHERE ent.name = ?
+                LEFT JOIN entity_main_names mn ON mn.entity_id = ent.entity_id
+                LEFT JOIN entity_aliases al ON al.entity_id = ent.entity_id
+                LEFT JOIN event_main_abstracts ma ON ma.event_id = e.event_id
+                WHERE mn.main_name = ? OR ent.name = ? OR al.alias = ?
                 ORDER BY COALESCE(e.event_start_time, e.reported_at) ASC
                 """,
-                (entity_name,)
+                (entity_name, entity_name, entity_name)
             ).fetchall()
             return [dict(r) for r in rows]
         finally:
@@ -224,15 +244,18 @@ class SQLiteKGReadStore(KGReadStore):
             rows = conn.execute(
                 """
                 SELECT 
-                    e1.name as entity1,
-                    e2.name as entity2,
+                    COALESCE(mn1.main_name, e1.name) as entity1,
+                    COALESCE(mn2.main_name, e2.name) as entity2,
                     COUNT(DISTINCT p1.event_id) as co_occurrence,
-                    GROUP_CONCAT(DISTINCT evt.abstract) as events
+                    GROUP_CONCAT(DISTINCT COALESCE(ma.main_abstract, evt.abstract)) as events
                 FROM participants p1
                 JOIN participants p2 ON p1.event_id = p2.event_id
                 JOIN entities e1 ON p1.entity_id = e1.entity_id
                 JOIN entities e2 ON p2.entity_id = e2.entity_id
                 JOIN events evt ON p1.event_id = evt.event_id
+                LEFT JOIN entity_main_names mn1 ON mn1.entity_id = e1.entity_id
+                LEFT JOIN entity_main_names mn2 ON mn2.entity_id = e2.entity_id
+                LEFT JOIN event_main_abstracts ma ON ma.event_id = evt.event_id
                 WHERE e1.entity_id < e2.entity_id
                 GROUP BY e1.name, e2.name
                 HAVING co_occurrence >= ?

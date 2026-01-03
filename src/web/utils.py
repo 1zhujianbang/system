@@ -130,6 +130,20 @@ def get_default_api_sources_df():
     if not data:
         # 扩展到20个以上的新闻源
         data = [
+            {"name": "GDELT", "language": "any", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-zh", "language": "zh", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-en", "language": "en", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-es", "language": "es", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-fr", "language": "fr", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-de", "language": "de", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-ru", "language": "ru", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-ja", "language": "ja", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-ko", "language": "ko", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-pt", "language": "pt", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-ar", "language": "ar", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-he", "language": "he", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-tr", "language": "tr", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
+            {"name": "GDELT-id", "language": "id", "country": None, "timeout": 30, "enabled": True, "type": "gdelt"},
             {"name": "GNews-cn", "language": "zh", "country": "cn", "timeout": 30, "enabled": True, "type": "gnews"},
             {"name": "GNews-us", "language": "en", "country": "us", "timeout": 30, "enabled": True, "type": "gnews"},
             {"name": "GNews-hk", "language": "zh", "country": "hk", "timeout": 30, "enabled": True, "type": "gnews"},
@@ -149,7 +163,17 @@ def get_default_api_sources_df():
             {"name": "GNews-mx", "language": "es", "country": "mx", "timeout": 30, "enabled": True, "type": "gnews"},
             {"name": "GNews-es", "language": "es", "country": "es", "timeout": 30, "enabled": True, "type": "gnews"},
             {"name": "GNews-it", "language": "it", "country": "it", "timeout": 30, "enabled": True, "type": "gnews"},
-            {"name": "GNews-in", "language": "en", "country": "in", "timeout": 30, "enabled": True, "type": "gnews"}
+            {"name": "GNews-in", "language": "en", "country": "in", "timeout": 30, "enabled": True, "type": "gnews"},
+            {"name": "GNews-il", "language": "he", "country": "il", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-sa", "language": "ar", "country": "sa", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-tr", "language": "tr", "country": "tr", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-nl", "language": "nl", "country": "nl", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-se", "language": "sv", "country": "se", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-no", "language": "no", "country": "no", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-pl", "language": "pl", "country": "pl", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-gr", "language": "el", "country": "gr", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-th", "language": "th", "country": "th", "timeout": 30, "enabled": False, "type": "gnews"},
+            {"name": "GNews-id", "language": "id", "country": "id", "timeout": 30, "enabled": False, "type": "gnews"}
         ]
         
     return pd.DataFrame(data)

@@ -162,7 +162,7 @@ class SQLiteStore:
     - participants/relations 为“带时间的元组”（强制 time 字段非空）
     """
 
-    SCHEMA_VERSION = "4"
+    SCHEMA_VERSION = "5"
 
     def __init__(self, config: Optional[SQLiteStoreConfig] = None):
         self.config = config or SQLiteStoreConfig(db_path=_tools.SQLITE_DB_FILE)
@@ -183,6 +183,7 @@ class SQLiteStore:
         with self._lock:
             conn = self._connect()
             try:
+                now = _utc_now_iso()
                 conn.executescript(
                     """
                     CREATE TABLE IF NOT EXISTS meta (
@@ -373,6 +374,27 @@ class SQLiteStore:
                         FOREIGN KEY(to_event_id) REFERENCES events(event_id) ON DELETE CASCADE
                     );
 
+                    -- =========================
+                    -- Canonical main names (展示/检索用，不影响 ID)
+                    -- =========================
+                    CREATE TABLE IF NOT EXISTS entity_main_names (
+                        entity_id TEXT PRIMARY KEY,
+                        main_name TEXT NOT NULL UNIQUE,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY(entity_id) REFERENCES entities(entity_id) ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_entity_main_names_main_name ON entity_main_names(main_name);
+
+                    CREATE TABLE IF NOT EXISTS event_main_abstracts (
+                        event_id TEXT PRIMARY KEY,
+                        main_abstract TEXT NOT NULL UNIQUE,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY(event_id) REFERENCES events(event_id) ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_event_main_abstracts_main_abstract ON event_main_abstracts(main_abstract);
+
                     CREATE TABLE IF NOT EXISTS event_edges (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         from_event_id TEXT NOT NULL,
@@ -471,6 +493,30 @@ class SQLiteStore:
                 cols_rs = {str(r["name"]) for r in conn.execute("PRAGMA table_info(relation_states)").fetchall() or []}
                 if "relation_kind" not in cols_rs:
                     conn.execute("ALTER TABLE relation_states ADD COLUMN relation_kind TEXT NOT NULL DEFAULT ''")
+
+                try:
+                    conn.execute(
+                        """
+                        INSERT OR IGNORE INTO entity_main_names(entity_id, main_name, created_at, updated_at)
+                        SELECT entity_id, name, ?, ?
+                        FROM entities
+                        """,
+                        (now, now),
+                    )
+                except Exception:
+                    pass
+
+                try:
+                    conn.execute(
+                        """
+                        INSERT OR IGNORE INTO event_main_abstracts(event_id, main_abstract, created_at, updated_at)
+                        SELECT event_id, abstract, ?, ?
+                        FROM events
+                        """,
+                        (now, now),
+                    )
+                except Exception:
+                    pass
 
                 conn.execute(
                     "INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)",
@@ -1805,7 +1851,8 @@ class SQLiteStore:
                     """
                     SELECT
                         e.entity_id AS entity_id,
-                        e.name AS name,
+                        e.name AS internal_name,
+                        COALESCE(mn.main_name, e.name) AS main_name,
                         e.first_seen AS first_seen,
                         e.last_seen AS last_seen,
                         e.sources_json AS sources_json,
@@ -1821,11 +1868,13 @@ class SQLiteStore:
                             WHERE m.resolved_entity_id = e.entity_id
                         ) AS mention_count
                     FROM entities e
+                    LEFT JOIN entity_main_names mn ON mn.entity_id = e.entity_id
                     GROUP BY e.entity_id
                     """
                 ).fetchall()
                 for r in rows:
-                    name = str(r["name"])
+                    internal_name = str(r["internal_name"] or "")
+                    main_name = str(r["main_name"] or "") or internal_name
                     try:
                         sources = _norm_source_list(json.loads(r["sources_json"] or "[]"))
                     except Exception:
@@ -1836,7 +1885,7 @@ class SQLiteStore:
                             forms = []
                     except Exception:
                         forms = []
-                    out[name] = {
+                    out[main_name] = {
                         "entity_id": str(r["entity_id"] or ""),
                         "first_seen": str(r["first_seen"] or ""),
                         "last_seen": str(r["last_seen"] or ""),
@@ -1846,6 +1895,8 @@ class SQLiteStore:
                         "count": int(r["count"] or 0),
                         "internal_num_mentions": int(r["mention_count"] or 0),
                     }
+                    if internal_name and internal_name != main_name and internal_name not in out:
+                        out[internal_name] = dict(out[main_name])
                 return out
             finally:
                 conn.close()
@@ -1854,12 +1905,20 @@ class SQLiteStore:
         n = (name or "").strip()
         if not n:
             return None
-        ent_id = canonical_entity_id(n)
+        ent_id = self.resolve_entity_id_by_name(n)
+        if not ent_id:
+            return None
         with self._lock:
             conn = self._connect()
             try:
                 row = conn.execute(
-                    "SELECT name, first_seen, last_seen, sources_json, original_forms_json FROM entities WHERE entity_id=?",
+                    """
+                    SELECT e.name AS internal_name, COALESCE(mn.main_name, e.name) AS main_name,
+                           e.first_seen, e.last_seen, e.sources_json, e.original_forms_json
+                    FROM entities e
+                    LEFT JOIN entity_main_names mn ON mn.entity_id = e.entity_id
+                    WHERE e.entity_id=?
+                    """,
                     (ent_id,),
                 ).fetchone()
                 if row is None:
@@ -1875,7 +1934,7 @@ class SQLiteStore:
                 except Exception:
                     forms = []
                 return {
-                    "name": str(row["name"] or n),
+                    "name": str(row["main_name"] or row["internal_name"] or n),
                     "first_seen": str(row["first_seen"] or ""),
                     "last_seen": str(row["last_seen"] or ""),
                     "sources": sources,
@@ -1891,15 +1950,20 @@ class SQLiteStore:
         n = (name or "").strip()
         if not n:
             return []
-        ent_id = canonical_entity_id(n)
+        ent_id = self.resolve_entity_id_by_name(n)
+        if not ent_id:
+            return []
         with self._lock:
             conn = self._connect()
             try:
                 rows = conn.execute(
                     """
-                    SELECT p.time AS time, e.abstract AS abstract, e.event_summary AS event_summary
+                    SELECT p.time AS time,
+                           COALESCE(ma.main_abstract, e.abstract) AS abstract,
+                           e.event_summary AS event_summary
                     FROM participants p
                     JOIN events e ON e.event_id = p.event_id
+                    LEFT JOIN event_main_abstracts ma ON ma.event_id = e.event_id
                     WHERE p.entity_id=?
                     ORDER BY p.time DESC
                     LIMIT ?
@@ -1931,12 +1995,33 @@ class SQLiteStore:
                 out: Dict[str, Any] = {}
                 events = conn.execute(
                     """
-                    SELECT event_id, abstract, event_summary, event_types_json,
-                           event_start_time, event_start_time_text, event_start_time_precision,
-                           reported_at, first_seen, last_seen, sources_json
-                    FROM events
+                    SELECT
+                        e.event_id AS event_id,
+                        e.abstract AS internal_abstract,
+                        COALESCE(ma.main_abstract, e.abstract) AS main_abstract,
+                        e.event_summary AS event_summary,
+                        e.event_types_json AS event_types_json,
+                        e.event_start_time AS event_start_time,
+                        e.event_start_time_text AS event_start_time_text,
+                        e.event_start_time_precision AS event_start_time_precision,
+                        e.reported_at AS reported_at,
+                        e.first_seen AS first_seen,
+                        e.last_seen AS last_seen,
+                        e.sources_json AS sources_json
+                    FROM events e
+                    LEFT JOIN event_main_abstracts ma ON ma.event_id = e.event_id
                     """
                 ).fetchall()
+                main_abs_by_evt = {
+                    str(e["event_id"]): str(e["main_abstract"] or e["internal_abstract"] or "")
+                    for e in (events or [])
+                    if str(e["event_id"] or "").strip()
+                }
+                internal_abs_by_evt = {
+                    str(e["event_id"]): str(e["internal_abstract"] or "")
+                    for e in (events or [])
+                    if str(e["event_id"] or "").strip()
+                }
 
                 # alias abstracts（同一个 event_id 可能对应多个 abstract）
                 alias_rows = conn.execute(
@@ -1979,7 +2064,13 @@ class SQLiteStore:
                 # entity_id -> name
                 ent_name = {
                     str(r["entity_id"]): str(r["name"])
-                    for r in conn.execute("SELECT entity_id, name FROM entities").fetchall()
+                    for r in conn.execute(
+                        """
+                        SELECT e.entity_id AS entity_id, COALESCE(mn.main_name, e.name) AS name
+                        FROM entities e
+                        LEFT JOIN entity_main_names mn ON mn.entity_id = e.entity_id
+                        """
+                    ).fetchall()
                 }
 
                 parts_by_evt: Dict[str, List[sqlite3.Row]] = {}
@@ -1991,7 +2082,8 @@ class SQLiteStore:
 
                 for e in events:
                     evt_id = str(e["event_id"])
-                    abstract = str(e["abstract"])
+                    internal_abs = str(e["internal_abstract"] or "")
+                    abstract = str(e["main_abstract"] or "") or internal_abs
                     try:
                         types = json.loads(e["event_types_json"] or "[]")
                         if not isinstance(types, list):
@@ -2086,6 +2178,8 @@ class SQLiteStore:
                         "relation_count": int(len(relations_out or [])),
                         "internal_num_mentions": int(mention_count_by_evt.get(evt_id) or 0),
                     }
+                    if internal_abs and internal_abs != abstract and internal_abs not in out:
+                        out[internal_abs] = dict(out[abstract])
 
                 # 额外输出 alias abstracts：让旧 abstract 也能映射到同一 event_id（兼容旧 UI/链接）
                 for abs2, evt_id in alias_to_evt.items():
@@ -2108,7 +2202,7 @@ class SQLiteStore:
                     tmp_evt = dict(row)
                     tmp_evt["abstract"] = abs2
                     # 复用上面的构造逻辑：最简单是直接走已有 out[row["abstract"]] 的复制
-                    canonical_abs = str(row["abstract"] or "")
+                    canonical_abs = str(main_abs_by_evt.get(str(row["event_id"] or "")) or internal_abs_by_evt.get(str(row["event_id"] or "")) or str(row["abstract"] or ""))
                     base = out.get(canonical_abs)
                     if isinstance(base, dict):
                         out[abs2] = dict(base)
@@ -2378,6 +2472,19 @@ class SQLiteStore:
                         conn.execute("DELETE FROM relations WHERE id=?", (rid,))
 
                 # 记录 alias 与 redirect
+                src_main = ""
+                dst_main = ""
+                try:
+                    r1 = conn.execute("SELECT main_name FROM entity_main_names WHERE entity_id=?", (from_entity_id,)).fetchone()
+                    src_main = str(r1["main_name"] or "") if r1 is not None else ""
+                except Exception:
+                    src_main = ""
+                try:
+                    r2 = conn.execute("SELECT main_name FROM entity_main_names WHERE entity_id=?", (to_entity_id,)).fetchone()
+                    dst_main = str(r2["main_name"] or "") if r2 is not None else ""
+                except Exception:
+                    dst_main = ""
+
                 if src_name:
                     conn.execute(
                         """
@@ -2385,6 +2492,14 @@ class SQLiteStore:
                         VALUES(?, ?, ?, ?, ?)
                         """,
                         (src_name, to_entity_id, 1.0, decision_input_hash or "", now),
+                    )
+                if src_main and src_main != dst_main:
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO entity_aliases(alias, entity_id, confidence, decision_input_hash, created_at)
+                        VALUES(?, ?, ?, ?, ?)
+                        """,
+                        (src_main, to_entity_id, 1.0, decision_input_hash or "", now),
                     )
                 conn.execute(
                     """
@@ -2572,10 +2687,28 @@ class SQLiteStore:
                 conn.execute("UPDATE event_edges SET to_event_id=? WHERE to_event_id=?", (to_event_id, from_event_id))
 
                 # 记录 alias/redirect（保留 src_abs）
+                src_main_abs = ""
+                dst_main_abs = ""
+                try:
+                    r1 = conn.execute("SELECT main_abstract FROM event_main_abstracts WHERE event_id=?", (from_event_id,)).fetchone()
+                    src_main_abs = str(r1["main_abstract"] or "") if r1 is not None else ""
+                except Exception:
+                    src_main_abs = ""
+                try:
+                    r2 = conn.execute("SELECT main_abstract FROM event_main_abstracts WHERE event_id=?", (to_event_id,)).fetchone()
+                    dst_main_abs = str(r2["main_abstract"] or "") if r2 is not None else ""
+                except Exception:
+                    dst_main_abs = ""
+
                 if src_abs:
                     conn.execute(
                         "INSERT OR REPLACE INTO event_aliases(abstract, event_id, confidence, decision_input_hash, created_at) VALUES(?, ?, ?, ?, ?)",
                         (src_abs, to_event_id, 1.0, decision_input_hash or "", now),
+                    )
+                if src_main_abs and src_main_abs != dst_main_abs and src_main_abs != src_abs:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO event_aliases(abstract, event_id, confidence, decision_input_hash, created_at) VALUES(?, ?, ?, ?, ?)",
+                        (src_main_abs, to_event_id, 1.0, decision_input_hash or "", now),
                     )
                 conn.execute(
                     "INSERT OR REPLACE INTO event_redirects(from_event_id, to_event_id, reason, decision_input_hash, created_at) VALUES(?, ?, ?, ?, ?)",
@@ -2643,6 +2776,122 @@ class SQLiteStore:
             finally:
                 conn.close()
 
+    def get_entity_main_name(self, entity_id: str) -> str:
+        eid = str(entity_id or "").strip()
+        if not eid:
+            return ""
+        with self._lock:
+            conn = self._connect()
+            try:
+                row = conn.execute(
+                    "SELECT main_name FROM entity_main_names WHERE entity_id=?",
+                    (eid,),
+                ).fetchone()
+                if row is None:
+                    row = conn.execute("SELECT name FROM entities WHERE entity_id=?", (eid,)).fetchone()
+                    return str(row["name"] or "") if row is not None else ""
+                return str(row["main_name"] or "")
+            finally:
+                conn.close()
+
+    def set_entity_main_name(self, entity_id: str, main_name: str) -> bool:
+        eid = str(entity_id or "").strip()
+        mn = str(main_name or "").strip()
+        if not eid or not mn:
+            return False
+        now = _utc_now_iso()
+        with self._lock:
+            conn = self._connect()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO entity_main_names(entity_id, main_name, created_at, updated_at)
+                    VALUES(?, ?, ?, ?)
+                    ON CONFLICT(entity_id) DO UPDATE SET
+                        main_name=excluded.main_name,
+                        updated_at=excluded.updated_at
+                    """,
+                    (eid, mn, now, now),
+                )
+                conn.commit()
+                return True
+            except Exception:
+                return False
+            finally:
+                conn.close()
+
+    def get_event_main_abstract(self, event_id: str) -> str:
+        eid = str(event_id or "").strip()
+        if not eid:
+            return ""
+        with self._lock:
+            conn = self._connect()
+            try:
+                row = conn.execute(
+                    "SELECT main_abstract FROM event_main_abstracts WHERE event_id=?",
+                    (eid,),
+                ).fetchone()
+                if row is None:
+                    row = conn.execute("SELECT abstract FROM events WHERE event_id=?", (eid,)).fetchone()
+                    return str(row["abstract"] or "") if row is not None else ""
+                return str(row["main_abstract"] or "")
+            finally:
+                conn.close()
+
+    def set_event_main_abstract(self, event_id: str, main_abstract: str) -> bool:
+        eid = str(event_id or "").strip()
+        ma = str(main_abstract or "").strip()
+        if not eid or not ma:
+            return False
+        now = _utc_now_iso()
+        with self._lock:
+            conn = self._connect()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO event_main_abstracts(event_id, main_abstract, created_at, updated_at)
+                    VALUES(?, ?, ?, ?)
+                    ON CONFLICT(event_id) DO UPDATE SET
+                        main_abstract=excluded.main_abstract,
+                        updated_at=excluded.updated_at
+                    """,
+                    (eid, ma, now, now),
+                )
+                conn.commit()
+                return True
+            except Exception:
+                return False
+            finally:
+                conn.close()
+
+    def resolve_entity_id_by_name(self, name: str, *, max_hops: int = 20) -> str:
+        n = (name or "").strip()
+        if not n:
+            return ""
+        with self._lock:
+            conn = self._connect()
+            try:
+                row = conn.execute(
+                    "SELECT entity_id FROM entity_main_names WHERE main_name=?",
+                    (n,),
+                ).fetchone()
+                if row is None:
+                    row = conn.execute("SELECT entity_id FROM entities WHERE name=?", (n,)).fetchone()
+                if row is None:
+                    row = conn.execute("SELECT entity_id FROM entity_aliases WHERE alias=?", (n,)).fetchone()
+                if row is None:
+                    return ""
+                return self._resolve_redirect_with_conn(
+                    conn,
+                    table="entity_redirects",
+                    from_col="from_entity_id",
+                    to_col="to_entity_id",
+                    start_id=str(row["entity_id"] or ""),
+                    max_hops=max_hops,
+                )
+            finally:
+                conn.close()
+
     def resolve_event_id_by_abstract(self, abstract: str, *, max_hops: int = 20) -> str:
         a = (abstract or "").strip()
         if not a:
@@ -2651,9 +2900,14 @@ class SQLiteStore:
             conn = self._connect()
             try:
                 row = conn.execute(
-                    "SELECT event_id FROM events WHERE abstract=?",
+                    "SELECT event_id FROM event_main_abstracts WHERE main_abstract=?",
                     (a,),
                 ).fetchone()
+                if row is None:
+                    row = conn.execute(
+                        "SELECT event_id FROM events WHERE abstract=?",
+                        (a,),
+                    ).fetchone()
                 if row is None:
                     row = conn.execute(
                         "SELECT event_id FROM event_aliases WHERE abstract=?",

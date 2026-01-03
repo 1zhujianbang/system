@@ -15,3 +15,5 @@ __pycache__/
 src/web/frontend/evolution_graph/node_modules/*
 src/web/frontend/evolution_graph/build/*
 docs/phase02_*.md
+subprojects/*
+tasks/phase-05.md

@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import List
 
 # 当前 Schema 版本
-SCHEMA_VERSION = "4"
+SCHEMA_VERSION = "5"
 
 # =============================================================================
 # 核心表结构（V3）
@@ -229,6 +229,32 @@ CREATE INDEX IF NOT EXISTS idx_event_edges_time ON event_edges(time);
 """
 
 # =============================================================================
+# Canonical 主名称映射表结构（entity/event 显示名与可检索主键）
+# =============================================================================
+
+MAIN_NAME_TABLES_DDL = """
+-- 实体主名称（展示/检索用，不影响 entity_id 的稳定性）
+CREATE TABLE IF NOT EXISTS entity_main_names (
+    entity_id TEXT PRIMARY KEY,
+    main_name TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(entity_id) REFERENCES entities(entity_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_entity_main_names_main_name ON entity_main_names(main_name);
+
+-- 事件主摘要（展示/检索用，不影响 event_id 的稳定性）
+CREATE TABLE IF NOT EXISTS event_main_abstracts (
+    event_id TEXT PRIMARY KEY,
+    main_abstract TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(event_id) REFERENCES events(event_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_event_main_abstracts_main_abstract ON event_main_abstracts(main_abstract);
+"""
+
+# =============================================================================
 # Schema 迁移表
 # =============================================================================
 
@@ -255,6 +281,7 @@ def get_full_schema_ddl() -> str:
         REVIEW_TABLES_DDL,
         ALIAS_TABLES_DDL,
         EVENT_EDGE_TABLES_DDL,
+        MAIN_NAME_TABLES_DDL,
         MIGRATION_TABLE_DDL,
     ])
 
@@ -294,6 +321,11 @@ MIGRATIONS: List[Migration] = [
         version="4",
         description="Add relation_kind to relations",
         up_sql="ALTER TABLE relations ADD COLUMN relation_kind TEXT NOT NULL DEFAULT '';",
+    ),
+    Migration(
+        version="5",
+        description="Add entity/event main name mapping tables",
+        up_sql=MAIN_NAME_TABLES_DDL,
     ),
 ]
 

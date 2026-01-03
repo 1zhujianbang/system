@@ -119,7 +119,11 @@ def llm_extract_events(
 - 技术或金融术语（如 "期权定价"、"资产负债表"、"量化宽松"）
 - 金融工具或资产名称（如 "标普500指数"、"10年期美债"、"黄金期货"、"BTC"）——除非指代其发行方、管理方或关联法人（如 "标普道琼斯指数公司"）
 - 泛称（如 "投资者"、"监管机构"、"某银行"、"大型科技公司"、"智能手机"）
-- 情绪/行情描述（如 "暴涨"、"抛售潮"、"经济衰退担忧"）"""
+- 情绪/行情描述（如 "暴涨"、"抛售潮"、"经济衰退担忧"）
+
+额外约束：
+- 实体必须“原子化”：不要把多个实体粘连成一个实体名称（例如“美国总统特朗普”必须拆分为“美国总统”和“特朗普”，不要输出粘连形式）
+- 同一主体多种表述时：entities 用最规范且不歧义的主名称，entities_original 保留对应原文表述并逐一对齐"""
 
     prompt = create_extraction_prompt(title, content, entity_definitions, reported_at=reported_at)
     tools.log(f"[LLM请求] 提示词长度: {len(prompt)} 字符")
@@ -146,6 +150,7 @@ def llm_extract_events(
         events = data.get("events", [])
         tools.log(f"[LLM请求] 解析到 {len(events)} 个事件")
         result = []
+
         for item in events:
             abstract = item.get("abstract", "").strip()
             # ----------------------------
@@ -254,55 +259,6 @@ def llm_extract_events(
             allowed_entities = set(entities)
             seen_rel = set()
 
-            def _norm_relation_kind(v: Any) -> str:
-                s = str(v or "").strip().lower()
-                if not s:
-                    return ""
-                if s in {"state", "static", "persistent", "stative", "status"}:
-                    return "state"
-                if s in {"event", "dynamic", "action", "incident"}:
-                    return "event"
-                if s in {"静态", "状态", "持续", "事实"}:
-                    return "state"
-                if s in {"动态", "事件", "动作", "言语", "一次"}:
-                    return "event"
-                return ""
-
-            def _infer_relation_kind(predicate: str) -> str:
-                p = str(predicate or "").strip()
-                if not p:
-                    return ""
-                eventive = (
-                    "指责",
-                    "警告",
-                    "宣布",
-                    "否认",
-                    "回应",
-                    "制裁",
-                    "起诉",
-                    "逮捕",
-                    "调查",
-                    "袭击",
-                    "攻击",
-                    "签署",
-                    "批准",
-                    "通过",
-                    "驳回",
-                    "解雇",
-                    "任命",
-                    "收购",
-                    "合作",
-                    "谈判",
-                    "会见",
-                    "访问",
-                    "驱逐",
-                    "抗议",
-                )
-                for kw in eventive:
-                    if kw and kw in p:
-                        return "event"
-                return "state"
-
             def _add_relation(s: str, p: str, o: str, ev: str = "", relation_kind: Any = ""):
                 ss = s.strip() if isinstance(s, str) else ""
                 pp = p.strip() if isinstance(p, str) else ""
@@ -314,7 +270,10 @@ def llm_extract_events(
                     return
                 if ss == oo:
                     return
-                rk = _norm_relation_kind(relation_kind) or _infer_relation_kind(pp)
+                rk_raw = relation_kind if isinstance(relation_kind, str) else str(relation_kind or "")
+                rk = rk_raw.strip().lower()
+                if rk not in {"state", "event"}:
+                    rk = ""
                 key = (ss, pp, oo, rk)
                 if key in seen_rel:
                     return
